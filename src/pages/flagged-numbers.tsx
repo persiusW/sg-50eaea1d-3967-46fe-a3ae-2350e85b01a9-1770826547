@@ -1,45 +1,79 @@
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { SEO } from "@/components/SEO";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import Link from "next/link";
 
-interface FlaggedNumber {
+type FlagStatus =
+  | "UNDER_REVIEW"
+  | "MULTIPLE_REPORTS"
+  | "PATTERN_MATCH_SCAM"
+  | "VERIFIED";
+
+interface PublicFlaggedNumber {
   id: string;
   phone: string;
-  name_on_number: string;
-  connected_scam: string;
-  verified: boolean;
+  name_on_number: string | null;
+  connected_page: string | null;
+  status: FlagStatus;
 }
+
+const STATUS_LABEL: Record<FlagStatus, string> = {
+  UNDER_REVIEW: "Under Review",
+  MULTIPLE_REPORTS: "Multiple Reports",
+  PATTERN_MATCH_SCAM: "Pattern Match",
+  VERIFIED: "Confirmed Scam",
+};
+
+const STATUS_CLASS: Record<FlagStatus, string> = {
+  UNDER_REVIEW:
+    "border-slate-400/40 bg-slate-100 text-slate-700 dark:border-slate-500/50 dark:bg-slate-900/40 dark:text-slate-100",
+  MULTIPLE_REPORTS:
+    "border-orange-500/50 bg-orange-500/10 text-orange-700 dark:border-orange-400/60 dark:bg-orange-900/30 dark:text-orange-200",
+  PATTERN_MATCH_SCAM:
+    "border-amber-600/60 bg-amber-500/15 text-amber-800 dark:border-amber-400/70 dark:bg-amber-900/40 dark:text-amber-100",
+  VERIFIED:
+    "border-red-600 bg-red-600/15 text-red-800 dark:border-red-500 dark:bg-red-900/50 dark:text-red-100",
+};
+
+const STATUS_PREFIX: Partial<Record<FlagStatus, string>> = {
+  MULTIPLE_REPORTS: "🚩 ",
+  PATTERN_MATCH_SCAM: "❗ ",
+  VERIFIED: "⛔ ",
+};
 
 export default function FlaggedNumbersPage() {
   const [query, setQuery] = useState("");
-  const [flagged, setFlagged] = useState<FlaggedNumber[]>([]);
+  const [items, setItems] = useState<PublicFlaggedNumber[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("flagged_numbers")
+      .select("id, phone, name_on_number, connected_page, status")
+      .order("created_at", { ascending: false });
+
+    if (data) {
+      setItems(
+        data.map((row) => ({
+          ...row,
+          status: (row.status || "UNDER_REVIEW") as FlagStatus,
+        })),
+      );
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchFlagged = async () => {
-      setLoading(true);
-      const { data } = await supabase
-        .from("flagged_numbers")
-        .select("id,phone,name_on_number,connected_scam,verified")
-        .order("created_at", { ascending: false });
-      if (data) {
-        setFlagged(data as FlaggedNumber[]);
-      }
-      setLoading(false);
-    };
-    fetchFlagged();
+    load();
   }, []);
 
-  const filtered = flagged.filter((item) => {
+  const filtered = items.filter((item) => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
     return (
       item.phone.toLowerCase().includes(q) ||
-      item.name_on_number.toLowerCase().includes(q) ||
-      item.connected_scam.toLowerCase().includes(q)
+      (item.name_on_number ?? "").toLowerCase().includes(q)
     );
   });
 
@@ -47,7 +81,7 @@ export default function FlaggedNumbersPage() {
     <>
       <SEO
         title="Flagged numbers – Transparent Turtle"
-        description="Browse a public, read-only list of phone numbers linked to scams or high-risk activity."
+        description="Search flagged phone numbers connected to scams and high-risk activity."
       />
       <main className="min-h-screen bg-background text-foreground">
         <div className="container flex min-h-screen flex-col gap-6 py-8">
@@ -57,8 +91,8 @@ export default function FlaggedNumbersPage() {
                 Flagged numbers
               </h1>
               <p className="text-sm text-muted-foreground">
-                A read-only, admin-curated list of phone numbers linked to scam
-                activity or high-risk patterns.
+                A public list of phone numbers connected to scams or high-risk
+                activity. Each entry has a status badge set by admins.
               </p>
             </div>
             <Link
@@ -70,46 +104,79 @@ export default function FlaggedNumbersPage() {
           </header>
 
           <section className="space-y-4">
-            <Input
-              type="search"
-              placeholder="Search by phone number, name on number, or scam description"
-              className="max-w-md"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                type="search"
+                placeholder="Search by phone number or name on number"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 sm:max-w-md"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
 
             <div className="rounded-lg border border-border bg-card p-4 text-sm">
               {loading && (
-                <p className="text-muted-foreground">Loading flagged numbers…</p>
-              )}
-              {!loading && filtered.length === 0 && (
-                <p className="text-muted-foreground">
-                  No flagged numbers match this search yet.
+                <p className="text-xs text-muted-foreground">
+                  Loading flagged numbers…
                 </p>
               )}
+
+              {!loading && filtered.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No flagged numbers match your search.
+                </p>
+              )}
+
               {!loading && filtered.length > 0 && (
-                <div className="space-y-2 text-xs sm:text-sm">
-                  {filtered.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col gap-1 rounded-md border border-border/70 bg-background/70 p-3"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium">{item.phone}</p>
-                        {item.verified && (
-                          <Badge className="bg-emerald-600 text-emerald-50">
-                            Verified
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Name on number: {item.name_on_number}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Connected scam/page: {item.connected_scam}
-                      </p>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <th className="py-2 pr-3 font-medium">Phone</th>
+                        <th className="py-2 px-3 font-medium">Name</th>
+                        <th className="py-2 px-3 font-medium">Connected scam/page</th>
+                        <th className="py-2 px-3 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-b border-border/60 last:border-0"
+                        >
+                          <td className="py-2 pr-3 align-middle">
+                            <div className="text-sm font-medium">
+                              {item.phone}
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 align-middle">
+                            {item.name_on_number || (
+                              <span className="text-[11px] text-muted-foreground">
+                                —
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 align-middle">
+                            {item.connected_page || (
+                              <span className="text-[11px] text-muted-foreground">
+                                —
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 align-middle">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${STATUS_CLASS[item.status]}`}
+                            >
+                              {STATUS_PREFIX[item.status] ?? ""}
+                              {item.status === "VERIFIED"
+                                ? "Confirmed Scam"
+                                : STATUS_LABEL[item.status]}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

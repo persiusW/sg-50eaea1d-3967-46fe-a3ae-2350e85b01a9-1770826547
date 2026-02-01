@@ -1,426 +1,424 @@
 import React, { useEffect, useState } from "react";
-import type { NextPage } from "next";
-import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { authService } from "@/services/authService";
-import { AdminNav } from "@/components/AdminNav";
+import Link from "next/link";
+
+type FlagStatus =
+  | "UNDER_REVIEW"
+  | "MULTIPLE_REPORTS"
+  | "PATTERN_MATCH_SCAM"
+  | "VERIFIED";
 
 interface FlaggedNumber {
   id: string;
   phone: string;
   name_on_number: string | null;
-  connected_scam: string | null;
+  connected_page: string | null;
   admin_note: string | null;
+  status: FlagStatus;
   verified: boolean;
-  created_at: string;
 }
 
-interface FlaggedFormState {
+interface FormState {
   id?: string;
   phone: string;
   name_on_number: string;
-  connected_scam: string;
+  connected_page: string;
   admin_note: string;
+  status: FlagStatus;
 }
 
-const AdminFlaggedNumbersPage: NextPage = () => {
-  const router = useRouter();
-  const [checkingAuth, setCheckingAuth] = useState(true);
+const STATUS_OPTIONS: FlagStatus[] = [
+  "UNDER_REVIEW",
+  "MULTIPLE_REPORTS",
+  "PATTERN_MATCH_SCAM",
+  "VERIFIED",
+];
 
-  const [flagged, setFlagged] = useState<FlaggedNumber[]>([]);
+const STATUS_LABEL: Record<FlagStatus, string> = {
+  UNDER_REVIEW: "Under Review",
+  MULTIPLE_REPORTS: "Multiple Reports",
+  PATTERN_MATCH_SCAM: "Pattern Match",
+  VERIFIED: "Confirmed Scam",
+};
+
+const STATUS_CLASS: Record<FlagStatus, string> = {
+  UNDER_REVIEW:
+    "border-slate-400/40 bg-slate-100 text-slate-700 dark:border-slate-500/50 dark:bg-slate-900/40 dark:text-slate-100",
+  MULTIPLE_REPORTS:
+    "border-orange-500/50 bg-orange-500/10 text-orange-700 dark:border-orange-400/60 dark:bg-orange-900/30 dark:text-orange-200",
+  PATTERN_MATCH_SCAM:
+    "border-amber-600/60 bg-amber-500/15 text-amber-800 dark:border-amber-400/70 dark:bg-amber-900/40 dark:text-amber-100",
+  VERIFIED:
+    "border-red-600 bg-red-600/15 text-red-800 dark:border-red-500 dark:bg-red-900/50 dark:text-red-100",
+};
+
+const STATUS_PREFIX: Partial<Record<FlagStatus, string>> = {
+  MULTIPLE_REPORTS: "🚩 ",
+  PATTERN_MATCH_SCAM: "❗ ",
+  VERIFIED: "⛔ ",
+};
+
+export default function AdminFlaggedNumbersPage() {
+  const [items, setItems] = useState<FlaggedNumber[]>([]);
   const [loading, setLoading] = useState(false);
-
-  const [form, setForm] = useState<FlaggedFormState>({
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>({
     phone: "",
     name_on_number: "",
-    connected_scam: "",
+    connected_page: "",
     admin_note: "",
+    status: "UNDER_REVIEW",
   });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("flagged_numbers")
+      .select(
+        "id, phone, name_on_number, connected_page, admin_note, status, verified",
+      )
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      setError(error.message);
+    } else if (data) {
+      setItems(
+        data.map((row) => ({
+          ...row,
+          status: (row.status || "UNDER_REVIEW") as FlagStatus,
+          verified: true,
+        })),
+      );
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const session = await authService.getCurrentSession();
-      if (!session) {
-        router.replace("/admin/login");
-        return;
-      }
-      setCheckingAuth(false);
-    };
-    void checkAuth();
-  }, [router]);
-
-  useEffect(() => {
-    if (checkingAuth) return;
-
-    const fetchFlagged = async () => {
-      setLoading(true);
-      const { data } = await supabase
-        .from("flagged_numbers")
-        .select(
-          "id,phone,name_on_number,connected_scam,admin_note,verified,created_at"
-        )
-        .order("created_at", { ascending: false });
-
-      if (data) {
-        setFlagged(data as FlaggedNumber[]);
-      }
-      setLoading(false);
-    };
-
-    void fetchFlagged();
-  }, [checkingAuth]);
+    load();
+  }, []);
 
   const resetForm = () => {
     setForm({
       phone: "",
       name_on_number: "",
-      connected_scam: "",
+      connected_page: "",
       admin_note: "",
+      status: "UNDER_REVIEW",
     });
-    setEditingId(null);
-    setFormError(null);
   };
 
-  const startCreate = () => {
-    resetForm();
-  };
-
-  const startEdit = (item: FlaggedNumber) => {
-    setEditingId(item.id);
+  const handleEdit = (item: FlaggedNumber) => {
     setForm({
       id: item.id,
       phone: item.phone,
       name_on_number: item.name_on_number ?? "",
-      connected_scam: item.connected_scam ?? "",
+      connected_page: item.connected_page ?? "",
       admin_note: item.admin_note ?? "",
+      status: item.status ?? "UNDER_REVIEW",
     });
-    setFormError(null);
-  };
-
-  const handleFormChange = (
-    field: keyof FlaggedFormState,
-    value: string
-  ) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setFormError(null);
-
-    const phone = form.phone.trim();
-    const name = form.name_on_number.trim();
-    const scam = form.connected_scam.trim();
-    const note = form.admin_note.trim();
-
-    if (!phone) {
-      setFormError("Phone number is required.");
-      setSaving(false);
-      return;
-    }
-
-    const payload: Record<string, unknown> = {
-      phone,
-      name_on_number: name || null,
-      connected_scam: scam || null,
-      admin_note: note || null,
-      verified: true,
-    };
-
-    let error = null;
-
-    if (editingId) {
-      const { error: updateError } = await supabase
-        .from("flagged_numbers")
-        .update(payload)
-        .eq("id", editingId);
-      error = updateError;
-    } else {
-      const { error: insertError } = await supabase
-        .from("flagged_numbers")
-        .insert(payload);
-      error = insertError;
-    }
-
-    if (error) {
-      setFormError("Failed to save flagged number. Please try again.");
-      setSaving(false);
-      return;
-    }
-
-    const { data } = await supabase
-      .from("flagged_numbers")
-      .select(
-        "id,phone,name_on_number,connected_scam,admin_note,verified,created_at"
-      )
-      .order("created_at", { ascending: false });
-
-    if (data) {
-      setFlagged(data as FlaggedNumber[]);
-    }
-
-    resetForm();
-    setSaving(false);
+    setError(null);
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = window.confirm(
-      "Delete this flagged number? This action cannot be undone."
-    );
-    if (!confirmed) return;
-
-    setDeletingId(id);
-    await supabase.from("flagged_numbers").delete().eq("id", id);
-
-    const { data } = await supabase
+    setSaving(true);
+    setError(null);
+    const { error } = await supabase
       .from("flagged_numbers")
-      .select(
-        "id,phone,name_on_number,connected_scam,admin_note,verified,created_at"
-      )
-      .order("created_at", { ascending: false });
-
-    if (data) {
-      setFlagged(data as FlaggedNumber[]);
+      .delete()
+      .eq("id", id);
+    if (error) {
+      setError(error.message);
+    } else {
+      await load();
+      if (form.id === id) {
+        resetForm();
+      }
     }
-    setDeletingId(null);
+    setSaving(false);
   };
 
-  if (checkingAuth) {
-    return (
-      <>
-        <SEO
-          title="Admin flagged numbers – Transparent Turtle"
-          description="Manage flagged numbers in the Transparent Turtle admin dashboard."
-        />
-        <main className="min-h-screen bg-background text-foreground">
-          <div className="container flex min-h-screen items-center justify-center">
-            <p className="text-sm text-muted-foreground">Checking access…</p>
-          </div>
-        </main>
-      </>
-    );
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+
+    const payload = {
+      phone: form.phone.trim(),
+      name_on_number: form.name_on_number.trim() || null,
+      connected_page: form.connected_page.trim() || null,
+      admin_note: form.admin_note.trim() || null,
+      status: form.status,
+      verified: true,
+    };
+
+    if (!payload.phone) {
+      setError("Phone number is required.");
+      setSaving(false);
+      return;
+    }
+
+    if (form.id) {
+      const { error } = await supabase
+        .from("flagged_numbers")
+        .update(payload)
+        .eq("id", form.id);
+      if (error) {
+        setError(error.message);
+      } else {
+        await load();
+        resetForm();
+      }
+    } else {
+      const { error } = await supabase
+        .from("flagged_numbers")
+        .insert([payload]);
+      if (error) {
+        setError(error.message);
+      } else {
+        await load();
+        resetForm();
+      }
+    }
+
+    setSaving(false);
+  };
 
   return (
     <>
       <SEO
-        title="Admin flagged numbers – Transparent Turtle"
-        description="Manage flagged numbers in the Transparent Turtle admin dashboard."
+        title="Admin – Flagged Numbers"
+        description="Manage flagged phone numbers for Transparent Turtle."
       />
       <main className="min-h-screen bg-background text-foreground">
         <div className="container flex min-h-screen flex-col gap-6 py-8">
-          <AdminNav />
-          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <header className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-xl font-semibold tracking-tight">
-                Flagged numbers (admin)
+                Admin · Flagged numbers
               </h1>
               <p className="text-sm text-muted-foreground">
-                Add, edit, and delete flagged numbers. All entries here are
-                treated as verified and admin-created. Admin notes are not
-                shown on the public page.
+                Add, edit, and remove flagged phone numbers. All entries are
+                internally marked as verified and have an explicit status.
               </p>
             </div>
+            <Link
+              href="/admin/businesses"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Back to admin businesses
+            </Link>
           </header>
 
-          <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-            <div className="space-y-4 rounded-lg border border-border bg-card p-4">
-              <p className="text-sm font-medium">
-                {editingId ? "Edit flagged number" : "Create flagged number"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                All flagged numbers created or edited here will be marked as
-                verified. Admin notes are for internal context only.
-              </p>
+          <section className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 rounded-lg border border-border bg-card p-4 text-sm"
+            >
+              <h2 className="text-sm font-semibold">
+                {form.id ? "Edit flagged number" : "Add flagged number"}
+              </h2>
 
-              <form
-                onSubmit={handleSave}
-                className="mt-3 space-y-4 text-sm"
-                noValidate
-              >
-                <div className="space-y-1">
-                  <Label htmlFor="phone">Phone number</Label>
-                  <Input
-                    id="phone"
-                    value={form.phone}
-                    onChange={(e) =>
-                      handleFormChange("phone", e.target.value)
-                    }
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="name_on_number">Name on number</Label>
-                  <Input
-                    id="name_on_number"
-                    value={form.name_on_number}
-                    onChange={(e) =>
-                      handleFormChange("name_on_number", e.target.value)
-                    }
-                    placeholder="e.g. John Doe, 'Support Line', etc."
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="connected_scam">
-                    Connected scam/page
-                  </Label>
-                  <Input
-                    id="connected_scam"
-                    value={form.connected_scam}
-                    onChange={(e) =>
-                      handleFormChange("connected_scam", e.target.value)
-                    }
-                    placeholder="e.g. 'Phishing bank calls', case ID, URL"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="admin_note">Admin note</Label>
-                  <Textarea
-                    id="admin_note"
-                    value={form.admin_note}
-                    onChange={(e) =>
-                      handleFormChange("admin_note", e.target.value)
-                    }
-                    placeholder="Internal context for admins only. Not shown publicly."
-                    rows={4}
-                  />
-                </div>
+              {error && (
+                <p className="text-xs text-red-600">
+                  {error}
+                </p>
+              )}
 
-                {formError && (
-                  <p className="text-xs text-destructive-foreground">
-                    {formError}
-                  </p>
-                )}
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button
-                    type="submit"
-                    disabled={saving}
-                  >
-                    {saving
-                      ? "Saving…"
-                      : editingId
-                      ? "Save changes"
-                      : "Create flagged number"}
-                  </Button>
-                  {editingId && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={resetForm}
-                    >
-                      Cancel edit
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </div>
-
-            <div className="space-y-3 rounded-lg border border-border bg-card p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-medium">All flagged numbers</p>
-                {loading && (
-                  <p className="text-xs text-muted-foreground">
-                    Loading…
-                  </p>
-                )}
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-foreground">
+                  Phone number
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  value={form.phone}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, phone: e.target.value }))
+                  }
+                />
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] border-collapse text-xs sm:text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                      <th className="py-2 pr-3">Phone number</th>
-                      <th className="py-2 px-3">Name on number</th>
-                      <th className="py-2 px-3">Connected scam/page</th>
-                      <th className="py-2 px-3">Verified</th>
-                      <th className="py-2 px-3 text-right">
-                        Created at
-                      </th>
-                      <th className="py-2 pl-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {flagged.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="py-4 text-center text-xs text-muted-foreground"
-                        >
-                          No flagged numbers yet.
-                        </td>
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-foreground">
+                  Name on number
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  value={form.name_on_number}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      name_on_number: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-foreground">
+                  Connected scam/page
+                </label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  value={form.connected_page}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      connected_page: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-foreground">
+                  Admin note
+                </label>
+                <textarea
+                  className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  rows={3}
+                  value={form.admin_note}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      admin_note: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-foreground">
+                  Status
+                </label>
+                <select
+                  className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      status: e.target.value as FlagStatus,
+                    }))
+                  }
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                >
+                  {saving
+                    ? "Saving…"
+                    : form.id
+                      ? "Save changes"
+                      : "Add flagged number"}
+                </button>
+                {form.id && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground hover:bg-accent"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+
+            <div className="rounded-lg border border-border bg-card p-4 text-sm">
+              <h2 className="text-sm font-semibold">Existing flagged numbers</h2>
+              {loading ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Loading…
+                </p>
+              ) : items.length === 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No flagged numbers yet.
+                </p>
+              ) : (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="min-w-full text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <th className="py-2 pr-3 font-medium">Phone</th>
+                        <th className="py-2 px-3 font-medium">Name</th>
+                        <th className="py-2 px-3 font-medium">Status</th>
+                        <th className="py-2 px-3 font-medium">Actions</th>
                       </tr>
-                    ) : (
-                      flagged.map((item) => (
+                    </thead>
+                    <tbody>
+                      {items.map((item) => (
                         <tr
                           key={item.id}
-                          className="border-b border-border/60 align-top"
+                          className="border-b border-border/60 last:border-0"
                         >
-                          <td className="py-2 pr-3 font-medium">
-                            {item.phone}
+                          <td className="py-2 pr-3 align-middle">
+                            <div className="text-sm font-medium">
+                              {item.phone}
+                            </div>
+                            {item.connected_page && (
+                              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                {item.connected_page}
+                              </div>
+                            )}
                           </td>
-                          <td className="py-2 px-3">
-                            {item.name_on_number || "—"}
+                          <td className="py-2 px-3 align-middle">
+                            {item.name_on_number || (
+                              <span className="text-[11px] text-muted-foreground">
+                                —
+                              </span>
+                            )}
                           </td>
-                          <td className="py-2 px-3">
-                            {item.connected_scam || "—"}
-                          </td>
-                          <td className="py-2 px-3">
-                            {item.verified ? "Yes" : "No"}
-                          </td>
-                          <td className="py-2 px-3 text-right text-[11px] text-muted-foreground whitespace-nowrap">
-                            {new Date(
-                              item.created_at
-                            ).toLocaleString()}
-                          </td>
-                          <td className="py-2 pl-3 text-right whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={() => startEdit(item)}
-                              className="mr-2 text-xs text-primary hover:underline"
+                          <td className="py-2 px-3 align-middle">
+                            <span
+                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${STATUS_CLASS[item.status]}`}
                             >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(item.id)}
-                              className="text-xs text-destructive-foreground hover:underline disabled:opacity-50"
-                              disabled={deletingId === item.id}
-                            >
-                              {deletingId === item.id
-                                ? "Deleting…"
-                                : "Delete"}
-                            </button>
+                              {STATUS_PREFIX[item.status] ?? ""}
+                              {item.status === "VERIFIED"
+                                ? "Confirmed Scam"
+                                : STATUS_LABEL[item.status]}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 align-middle">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(item)}
+                                className="text-[11px] text-emerald-700 hover:underline dark:text-emerald-300"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(item.id)}
+                                className="text-[11px] text-red-600 hover:underline"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <p className="text-[11px] text-muted-foreground">
-                This list powers the public flagged numbers page. Admin notes
-                are only visible here in the dashboard and are not shown
-                publicly.
-              </p>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </section>
         </div>
       </main>
     </>
   );
-};
-
-export default AdminFlaggedNumbersPage;
+}

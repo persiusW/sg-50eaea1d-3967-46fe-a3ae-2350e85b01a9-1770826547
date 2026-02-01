@@ -28,7 +28,8 @@ const statusLabel: Record<BusinessStatus, string> = {
 };
 
 const statusBadgeClass: Record<BusinessStatus, string> = {
-  UNDER_REVIEW: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+  UNDER_REVIEW:
+    "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
   MULTIPLE_REPORTS:
     "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40",
   PATTERN_MATCH_SCAM:
@@ -137,6 +138,7 @@ export default function BusinessesPage() {
               {loading && (
                 <p className="text-muted-foreground">Loading results…</p>
               )}
+
               {!loading && businesses.length === 0 && (
                 <p className="text-muted-foreground">
                   No businesses found yet. Try a different search or{" "}
@@ -149,57 +151,63 @@ export default function BusinessesPage() {
                   .
                 </p>
               )}
+
               {!loading && businesses.length > 0 && (
-                <div className="space-y-2 text-xs sm:text-sm">
-                  {businesses.length === 0 ? (
-                    <p className="text-muted-foreground">
-                      No businesses found yet. Try a different search or{" "}
-                      <Link
-                        href="/businesses/add"
-                        className="underline underline-offset-4"
-                      >
-                        add a new business
-                      </Link>
-                      .
-                    </p>
-                  ) : (
-                    businesses.map((biz) => (
-                      <tr
-                        key={biz.id}
-                        className="border-b border-border/60"
-                      >
-                        <td className="py-2 pr-3 align-middle">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">
-                              {biz.name}
-                            </span>
-                            {biz.verified && (
-                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700/60">
-                                Verified
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-xs sm:text-sm">
+                    <thead>
+                      <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                        <th className="py-2 pr-3 font-medium">Business</th>
+                        <th className="py-2 px-3 font-medium">Category</th>
+                        <th className="py-2 px-3 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {businesses.map((biz) => (
+                        <tr
+                          key={biz.id}
+                          className="border-b border-border/60 last:border-0"
+                        >
+                          <td className="py-2 pr-3 align-middle">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/businesses/${biz.id}`}
+                                className="text-sm font-medium hover:underline"
+                              >
+                                {biz.name}
+                              </Link>
+                              {biz.verified && (
+                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700/60">
+                                  Verified
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">
+                              {biz.phone}
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 align-middle">
+                            {biz.category}
+                          </td>
+                          <td className="py-2 px-3 align-middle">
+                            {biz.status ? (
+                              <span
+                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                                  statusBadgeClass[biz.status]
+                                }`}
+                              >
+                                {statusLabel[biz.status] ?? biz.status}
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-muted-foreground">
+                                No status
                               </span>
                             )}
-                          </div>
-                          <div className="mt-0.5 text-[11px] text-muted-foreground">
-                            {biz.phone}
-                          </div>
-                        </td>
-                        <td className="py-2 px-3 align-middle">
-                          {biz.category}
-                        </td>
-                        <td className="py-2 px-3 align-middle">
-                          {biz.status ? (
-                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              {statusLabel[biz.status] ?? biz.status}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-muted-foreground">
-                              No status
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
