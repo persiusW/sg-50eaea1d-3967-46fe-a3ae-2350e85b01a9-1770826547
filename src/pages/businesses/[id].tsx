@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 type BusinessStatus =
-  | "UNDER_REVIEW"
-  | "MULTIPLE_REPORTS"
-  | "PATTERN_MATCH_SCAM"
-  | "VERIFIED"
-  | "SCAM";
+"UNDER_REVIEW" |
+"MULTIPLE_REPORTS" |
+"PATTERN_MATCH_SCAM" |
+"VERIFIED" |
+"SCAM";
 
 interface Business {
   id: string;
@@ -50,19 +50,19 @@ const statusLabel: Record<BusinessStatus, string> = {
   MULTIPLE_REPORTS: "Multiple Independent Reports",
   PATTERN_MATCH_SCAM: "Pattern Match: Known Scam Method",
   VERIFIED: "Verified",
-  SCAM: "Confirmed Scam",
+  SCAM: "Confirmed Scam"
 };
 
 const statusBadgeClass: Record<BusinessStatus, string> = {
   UNDER_REVIEW:
-    "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+  "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
   MULTIPLE_REPORTS:
-    "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40",
+  "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40",
   PATTERN_MATCH_SCAM:
-    "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40",
+  "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40",
   VERIFIED: "bg-emerald-600 text-emerald-50",
   SCAM:
-    "bg-red-600 text-red-50 border border-red-700 dark:bg-red-900 dark:text-red-100",
+  "bg-red-600 text-red-50 border border-red-700 dark:bg-red-900 dark:text-red-100"
 };
 
 const BusinessProfilePage: NextPage = () => {
@@ -80,7 +80,7 @@ const BusinessProfilePage: NextPage = () => {
     reviewer_name: "",
     reviewer_phone: "",
     rating: "5",
-    body: "",
+    body: ""
   });
 
   useEffect(() => {
@@ -89,11 +89,11 @@ const BusinessProfilePage: NextPage = () => {
     const fetchBusiness = async () => {
       setLoading(true);
       setLoadError(null);
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
+      const { data, error } = await supabase.
+      from("businesses").
+      select("*").
+      eq("id", id).
+      maybeSingle();
 
       if (error) {
         setLoadError("Failed to load business. Please try again.");
@@ -113,11 +113,11 @@ const BusinessProfilePage: NextPage = () => {
 
     const fetchReviews = async () => {
       setLoadingReviews(true);
-      const { data, error } = await supabase
-        .from("reviews")
-        .select("*")
-        .eq("business_id", id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.
+      from("reviews").
+      select("*").
+      eq("business_id", id).
+      order("created_at", { ascending: false });
 
       if (!error && data) {
         setReviews(data as Review[]);
@@ -130,9 +130,9 @@ const BusinessProfilePage: NextPage = () => {
   }, [id]);
 
   const handleFormChange = (
-    field: keyof ReviewFormState,
-    value: string,
-  ): void => {
+  field: keyof ReviewFormState,
+  value: string)
+  : void => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -155,7 +155,7 @@ const BusinessProfilePage: NextPage = () => {
       reviewer_name: form.reviewer_name.trim() || "Anonymous",
       reviewer_phone: form.reviewer_phone.trim(),
       rating: ratingNumber,
-      body: form.body.trim(),
+      body: form.body.trim()
     });
 
     if (error) {
@@ -168,14 +168,14 @@ const BusinessProfilePage: NextPage = () => {
       reviewer_name: "",
       reviewer_phone: "",
       rating: "5",
-      body: "",
+      body: ""
     });
 
-    const { data: refreshed, error: refreshError } = await supabase
-      .from("reviews")
-      .select("*")
-      .eq("business_id", business.id)
-      .order("created_at", { ascending: false });
+    const { data: refreshed, error: refreshError } = await supabase.
+    from("reviews").
+    select("*").
+    eq("business_id", business.id).
+    order("created_at", { ascending: false });
 
     if (!refreshError && refreshed) {
       setReviews(refreshed as Review[]);
@@ -186,19 +186,19 @@ const BusinessProfilePage: NextPage = () => {
 
   const reviewsCount = reviews.length;
   const avgRating =
-    reviewsCount > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewsCount
-      : 0;
+  reviewsCount > 0 ?
+  reviews.reduce((sum, r) => sum + r.rating, 0) / reviewsCount :
+  0;
 
   const title =
-    business?.name ?? "Business profile – Transparent Turtle";
+  business?.name ?? "Business profile – Transparent Turtle";
 
   return (
     <>
       <SEO
         title={title}
-        description="View business details, status, and community reviews on Transparent Turtle."
-      />
+        description="View business details, status, and community reviews on Transparent Turtle." />
+
       <main className="min-h-screen bg-background text-foreground">
         <div className="container flex min-h-screen flex-col gap-6 py-8">
           <header className="flex items-center justify-between gap-4">
@@ -213,22 +213,22 @@ const BusinessProfilePage: NextPage = () => {
             </div>
             <Link
               href="/businesses"
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
+              className="text-xs text-muted-foreground hover:text-foreground">
+
               Back to search
             </Link>
           </header>
 
-          {loading ? (
-            <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+          {loading ?
+          <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
               Loading business…
-            </div>
-          ) : loadError ? (
-            <div className="rounded-lg border border-destructive bg-destructive/5 p-4 text-sm text-destructive-foreground">
+            </div> :
+          loadError ?
+          <div className="rounded-lg border border-destructive bg-destructive/5 p-4 text-sm text-destructive-foreground">
               {loadError}
-            </div>
-          ) : business ? (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            </div> :
+          business ?
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
               <section className="space-y-4">
                 <div className="space-y-3 rounded-lg border border-border bg-card p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -237,52 +237,52 @@ const BusinessProfilePage: NextPage = () => {
                         <h2 className="text-lg font-semibold tracking-tight">
                           {business.name}
                         </h2>
-                        {business.verified && (
-                          <Badge className="bg-emerald-600 text-emerald-50">
+                        {business.verified &&
+                      <Badge className="bg-emerald-600 text-emerald-50">
                             Verified
                           </Badge>
-                        )}
+                      }
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Phone: {business.phone}
                       </p>
-                      {business.location && (
-                        <p className="text-xs text-muted-foreground">
+                      {business.location &&
+                    <p className="text-xs text-muted-foreground">
                           Location: {business.location}
                         </p>
-                      )}
+                    }
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       {business.status &&
-                        business.status !== "VERIFIED" && (
-                          <Badge
-                            className={
-                              business.status === "SCAM"
-                                ? "border bg-red-600 text-red-50 dark:bg-red-900 dark:text-red-100"
-                                : "border " +
-                                  (statusBadgeClass[business.status] ||
-                                    "bg-muted text-foreground")
-                            }
-                          >
-                            {business.status === "SCAM"
-                              ? "⛔ Confirmed Scam"
-                              : statusLabel[business.status] ??
-                                business.status}
+                    business.status !== "VERIFIED" &&
+                    <Badge
+                      className={
+                      business.status === "SCAM" ?
+                      "border bg-red-600 text-red-50 dark:bg-red-900 dark:text-red-100" :
+                      "border " + (
+                      statusBadgeClass[business.status] ||
+                      "bg-muted text-foreground")
+                      }>
+
+                            {business.status === "SCAM" ?
+                      "⛔ Confirmed Scam" :
+                      statusLabel[business.status] ??
+                      business.status}
                           </Badge>
-                        )}
+                    }
 
                       {(!business.status ||
-                        business.status === "VERIFIED") && (
-                        <p className="text-[11px] text-muted-foreground">
-                          {reviewsCount > 0
-                            ? `⭐ ${avgRating.toFixed(
-                                1,
-                              )} • ${reviewsCount} review${
-                                reviewsCount === 1 ? "" : "s"
-                              }`
-                            : "No reviews yet"}
+                    business.status === "VERIFIED") &&
+                    <p className="text-[11px] text-muted-foreground">
+                          {reviewsCount > 0 ?
+                      `⭐ ${avgRating.toFixed(
+                        1
+                      )} • ${reviewsCount} review${
+                      reviewsCount === 1 ? "" : "s"}` :
+
+                      "No reviews yet"}
                         </p>
-                      )}
+                    }
                     </div>
                   </div>
 
@@ -301,10 +301,10 @@ const BusinessProfilePage: NextPage = () => {
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground">
-                    This profile is public and read-only. Only admins can edit
-                    or remove business details or status badges.
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">This is a public profile. Share your experience respectfully to help others make informed decisions.
+
+
+                </p>
                 </div>
               </section>
 
@@ -317,103 +317,103 @@ const BusinessProfilePage: NextPage = () => {
                   </p>
 
                   <form
-                    onSubmit={handleSubmit}
-                    className="mt-3 space-y-3 text-sm"
-                  >
+                  onSubmit={handleSubmit}
+                  className="mt-3 space-y-3 text-sm">
+
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1">
                         <label
-                          htmlFor="reviewer_name"
-                          className="block text-xs font-medium"
-                        >
+                        htmlFor="reviewer_name"
+                        className="block text-xs font-medium">
+
                           Your name
                         </label>
                         <Input
-                          id="reviewer_name"
-                          value={form.reviewer_name}
-                          onChange={(e) =>
-                            handleFormChange(
-                              "reviewer_name",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Name or alias"
-                        />
+                        id="reviewer_name"
+                        value={form.reviewer_name}
+                        onChange={(e) =>
+                        handleFormChange(
+                          "reviewer_name",
+                          e.target.value
+                        )
+                        }
+                        placeholder="Name or alias" />
+
                       </div>
                       <div className="space-y-1">
                         <label
-                          htmlFor="reviewer_phone"
-                          className="block text-xs font-medium"
-                        >
+                        htmlFor="reviewer_phone"
+                        className="block text-xs font-medium">
+
                           Your phone (temporary identifier)
                         </label>
                         <Input
-                          id="reviewer_phone"
-                          value={form.reviewer_phone}
-                          onChange={(e) =>
-                            handleFormChange(
-                              "reviewer_phone",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="+1 (___) ___-____"
-                          required
-                        />
+                        id="reviewer_phone"
+                        value={form.reviewer_phone}
+                        onChange={(e) =>
+                        handleFormChange(
+                          "reviewer_phone",
+                          e.target.value
+                        )
+                        }
+                        placeholder="+1 (___) ___-____"
+                        required />
+
                       </div>
                     </div>
 
                     <div className="space-y-1">
                       <label
-                        htmlFor="rating"
-                        className="block text-xs font-medium"
-                      >
+                      htmlFor="rating"
+                      className="block text-xs font-medium">
+
                         Rating (1–5)
                       </label>
                       <Input
-                        id="rating"
-                        type="number"
-                        min={1}
-                        max={5}
-                        value={form.rating}
-                        onChange={(e) =>
-                          handleFormChange("rating", e.target.value)
-                        }
-                        className="max-w-[120px]"
-                        required
-                      />
+                      id="rating"
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={form.rating}
+                      onChange={(e) =>
+                      handleFormChange("rating", e.target.value)
+                      }
+                      className="max-w-[120px]"
+                      required />
+
                     </div>
 
                     <div className="space-y-1">
                       <label
-                        htmlFor="body"
-                        className="block text-xs font-medium"
-                      >
+                      htmlFor="body"
+                      className="block text-xs font-medium">
+
                         Review
                       </label>
                       <Textarea
-                        id="body"
-                        value={form.body}
-                        onChange={(e) =>
-                          handleFormChange("body", e.target.value)
-                        }
-                        rows={4}
-                        placeholder="Describe your experience. Avoid sharing passwords, account numbers, or other sensitive data."
-                        required
-                      />
+                      id="body"
+                      value={form.body}
+                      onChange={(e) =>
+                      handleFormChange("body", e.target.value)
+                      }
+                      rows={4}
+                      placeholder="Describe your experience. Avoid sharing passwords, account numbers, or other sensitive data."
+                      required />
+
                     </div>
 
-                    {submitError && (
-                      <p className="text-xs text-destructive-foreground">
+                    {submitError &&
+                  <p className="text-xs text-destructive-foreground">
                         {submitError}
                       </p>
-                    )}
+                  }
 
                     <Button
-                      type="submit"
-                      size="sm"
-                      disabled={submitting}
-                      className="mt-1"
-                    >
+                    type="submit"
+                    size="sm"
+                    disabled={submitting}
+                    className="mt-1">
+
                       {submitting ? "Submitting…" : "Publish review"}
                     </Button>
                   </form>
@@ -427,22 +427,22 @@ const BusinessProfilePage: NextPage = () => {
                     </p>
                   </div>
 
-                  {loadingReviews ? (
-                    <p className="mt-3 text-xs text-muted-foreground">
+                  {loadingReviews ?
+                <p className="mt-3 text-xs text-muted-foreground">
                       Loading reviews…
-                    </p>
-                  ) : reviews.length === 0 ? (
-                    <p className="mt-3 text-xs text-muted-foreground">
+                    </p> :
+                reviews.length === 0 ?
+                <p className="mt-3 text-xs text-muted-foreground">
                       No reviews yet. Be the first to share your
                       experience.
-                    </p>
-                  ) : (
-                    <div className="mt-3 space-y-3 text-xs">
-                      {reviews.map((review) => (
-                        <div
-                          key={review.id}
-                          className="rounded-md border border-border/70 bg-background/70 p-3"
-                        >
+                    </p> :
+
+                <div className="mt-3 space-y-3 text-xs">
+                      {reviews.map((review) =>
+                  <div
+                    key={review.id}
+                    className="rounded-md border border-border/70 bg-background/70 p-3">
+
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-medium">
                               {review.reviewer_name || "Anonymous"}
@@ -458,17 +458,17 @@ const BusinessProfilePage: NextPage = () => {
                             Reviewer phone: {review.reviewer_phone}
                           </p>
                         </div>
-                      ))}
-                    </div>
                   )}
+                    </div>
+                }
                 </div>
               </section>
-            </div>
-          ) : null}
+            </div> :
+          null}
         </div>
       </main>
-    </>
-  );
+    </>);
+
 };
 
 export default BusinessProfilePage;
