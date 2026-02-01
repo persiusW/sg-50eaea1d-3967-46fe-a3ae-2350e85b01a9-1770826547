@@ -18,8 +18,8 @@ export function AdminNav(): JSX.Element {
     <header className="border-b bg-background">
       <div className="mx-auto flex w-full max-w-screen-xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <div className="shrink-0 text-sm font-semibold">
-          <Link href="/admin" className="whitespace-nowrap">
-            Transparent Turtle · Admin (NAV-TEST)
+          <Link href="/admin" className="whitespace-nowrap">Transparent Turtle · Admin
+
           </Link>
         </div>
 
@@ -42,8 +42,8 @@ export function AdminNav(): JSX.Element {
           <button
             type="button"
             onClick={handleSignOut}
-            className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-destructive"
-          >
+            className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-destructive">
+
             Sign out
           </button>
         </nav>
@@ -51,14 +51,14 @@ export function AdminNav(): JSX.Element {
         <button
           type="button"
           className="ml-auto inline-flex items-center rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground sm:hidden"
-          onClick={() => setOpen((prev) => !prev)}
-        >
+          onClick={() => setOpen((prev) => !prev)}>
+
           Menu
         </button>
       </div>
 
-      {open && (
-        <div className="border-t border-border bg-background px-4 pb-3 pt-2 text-sm sm:hidden">
+      {open &&
+      <div className="border-t border-border bg-background px-4 pb-3 pt-2 text-sm sm:hidden">
           <nav className="mt-4 flex flex-col gap-2 text-sm font-medium">
             <Link href="/admin" className="hover:text-primary">
               Overview
@@ -76,15 +76,15 @@ export function AdminNav(): JSX.Element {
               Reports
             </Link>
             <button
-              type="button"
-              onClick={handleSignOut}
-              className="mt-2 text-left text-sm font-medium text-muted-foreground hover:text-destructive"
-            >
+            type="button"
+            onClick={handleSignOut}
+            className="mt-2 text-left text-sm font-medium text-muted-foreground hover:text-destructive">
+
               Sign out
             </button>
           </nav>
         </div>
-      )}
-    </header>
-  );
+      }
+    </header>);
+
 }
