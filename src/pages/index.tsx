@@ -18,8 +18,8 @@ export default function Home() {
                 <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700/60">Public. Transparent. Verified records.
 
                 </span>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
-                  Ghana’s Most Trusted Business Directory
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">Ghana’s Trusted Business Directory
+
                 </h1>
                 <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 sm:text-base">
                   Discover trusted businesses across Ghana.
@@ -94,10 +94,10 @@ export default function Home() {
                   </div>
 
                   {/* Helper text */}
-                  <p className="mt-2 rounded-md border border-dashed border-border bg-background/60 p-2 text-[11px] text-muted-foreground">
-                    Transparent Turtle combines public reports with admin-controlled
-                    verification. Businesses created by admins start Verified; suspicious
-                    patterns escalate risk badges.
+                  <p className="mt-2 rounded-md border border-dashed border-border bg-background/60 p-2 text-[11px] text-muted-foreground">Transparent Turtle combines public reports with structured verification. Trusted businesses appear as Verified, while suspicious patterns trigger risk badges over time.
+
+
+
                   </p>
                 </div>
               </aside>
@@ -109,8 +109,8 @@ export default function Home() {
               <div className="grid gap-6 md:grid-cols-3">
                 <article className="rounded-lg border border-border bg-background p-4 shadow-sm">
                   <h3 className="text-sm font-semibold">Public reviews</h3>
-                  <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
-                    Read and share real experiences from people across Ghana. Reviews publish openly, with moderation handled by trusted admins.
+                  <p className="mt-2 text-xs text-muted-foreground sm:text-sm">Read and share real experiences from people across Ghana. Reviews publish openly, with safeguards in place to prevent abuse and false reporting.
+
                   </p>
                 </article>
                 <article className="rounded-lg border border-border bg-background p-4 shadow-sm">
@@ -121,8 +121,8 @@ export default function Home() {
                 </article>
                 <article className="rounded-lg border border-border bg-background p-4 shadow-sm">
                   <h3 className="text-sm font-semibold">Flagged numbers</h3>
-                  <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
-                    A searchable list of phone numbers linked to scams or high-risk activity, reviewed and managed by admins.
+                  <p className="mt-2 text-xs text-muted-foreground sm:text-sm">A searchable list of phone numbers linked to scams or high-risk activity, surfaced through reports and verification signals.
+
                   </p>
                 </article>
               </div>
