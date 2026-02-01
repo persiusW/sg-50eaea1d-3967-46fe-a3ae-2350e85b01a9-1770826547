@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
+import type { NextPage } from "next";
+import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
-import Link from "next/link";
+import { AdminNav } from "@/components/AdminNav";
 
 type FlagStatus =
   | "UNDER_REVIEW"
@@ -225,27 +227,23 @@ export default function AdminFlaggedNumbersPage() {
   return (
     <>
       <SEO
-        title="Admin – Flagged Numbers"
-        description="Manage flagged phone numbers for Transparent Turtle."
+        title="Admin flagged numbers – Transparent Turtle"
+        description="Manage flagged phone numbers in the Transparent Turtle admin dashboard."
       />
       <main className="min-h-screen bg-background text-foreground">
         <div className="container flex min-h-screen flex-col gap-6 py-8">
-          <header className="flex items-center justify-between gap-4">
+          <AdminNav />
+
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-xl font-semibold tracking-tight">
-                Admin · Flagged numbers
+                Flagged numbers (admin)
               </h1>
               <p className="text-sm text-muted-foreground">
-                Add, edit, and remove flagged phone numbers. All entries are
-                internally marked as verified and have an explicit status.
+                Add, edit, or remove flagged phone numbers. All entries here are
+                considered high risk.
               </p>
             </div>
-            <Link
-              href="/admin/businesses"
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Back to admin businesses
-            </Link>
           </header>
 
           <section className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">

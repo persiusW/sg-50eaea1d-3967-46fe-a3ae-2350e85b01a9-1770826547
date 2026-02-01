@@ -16,13 +16,21 @@ export function AdminNav(): JSX.Element {
 
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex w-full max-w-screen-xl items-center gap-4 px-4 sm:px-6 lg:px-8 py-3">
+      <div className="mx-auto flex w-full max-w-screen-xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <div className="shrink-0 text-sm font-semibold">
-          <Link href="/admin/businesses" className="whitespace-nowrap">
+          <Link href="/admin" className="whitespace-nowrap">
             Transparent Turtle · Admin
           </Link>
         </div>
+
+        {/* Desktop nav */}
         <nav className="hidden flex-1 justify-end gap-3 text-xs sm:flex sm:text-sm">
+          <Link
+            href="/admin"
+            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+          >
+            Dashboard
+          </Link>
           <Link
             href="/admin/businesses"
             className="whitespace-nowrap text-muted-foreground hover:text-foreground"
@@ -49,6 +57,8 @@ export function AdminNav(): JSX.Element {
             Sign out
           </button>
         </nav>
+
+        {/* Mobile menu button */}
         <button
           type="button"
           className="ml-auto inline-flex items-center rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground sm:hidden"
@@ -57,9 +67,18 @@ export function AdminNav(): JSX.Element {
           Menu
         </button>
       </div>
+
+      {/* Mobile dropdown */}
       {open && (
         <div className="border-t border-border bg-background px-4 pb-3 pt-2 text-sm sm:hidden">
           <nav className="flex flex-col gap-2">
+            <Link
+              href="/admin"
+              onClick={closeMenu}
+              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+            >
+              Dashboard
+            </Link>
             <Link
               href="/admin/businesses"
               onClick={closeMenu}
