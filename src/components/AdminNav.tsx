@@ -23,41 +23,26 @@ export function AdminNav(): JSX.Element {
           </Link>
         </div>
 
-        <nav className="hidden flex-1 justify-end gap-3 text-xs sm:flex sm:text-sm">
-          <Link
-            href="/admin"
-            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-          >
-            Dashboard
+        <nav className="hidden items-center gap-4 text-sm font-medium text-foreground/90 md:flex">
+          <Link href="/admin" className="hover:text-primary">
+            Overview
           </Link>
-          <Link
-            href="/admin/businesses"
-            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-          >
+          <Link href="/admin/businesses" className="hover:text-primary">
             Businesses
           </Link>
-          <Link
-            href="/admin/reviews"
-            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-          >
+          <Link href="/admin/reviews" className="hover:text-primary">
             Reviews
           </Link>
-          <Link
-            href="/admin/flagged-numbers"
-            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-          >
-            Flagged Numbers
+          <Link href="/admin/flagged-numbers" className="hover:text-primary">
+            Flagged numbers
           </Link>
-          <Link
-            href="/admin/reports"
-            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-          >
+          <Link href="/admin/reports" className="hover:text-primary">
             Reports
           </Link>
           <button
             type="button"
             onClick={handleSignOut}
-            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+            className="text-sm font-medium text-muted-foreground hover:text-destructive"
           >
             Sign out
           </button>
@@ -74,49 +59,26 @@ export function AdminNav(): JSX.Element {
 
       {open && (
         <div className="border-t border-border bg-background px-4 pb-3 pt-2 text-sm sm:hidden">
-          <nav className="flex flex-col gap-2">
-            <Link
-              href="/admin"
-              onClick={closeMenu}
-              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-            >
-              Dashboard
+          <nav className="mt-4 flex flex-col gap-2 text-sm font-medium">
+            <Link href="/admin" className="hover:text-primary">
+              Overview
             </Link>
-            <Link
-              href="/admin/businesses"
-              onClick={closeMenu}
-              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/admin/businesses" className="hover:text-primary">
               Businesses
             </Link>
-            <Link
-              href="/admin/reviews"
-              onClick={closeMenu}
-              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/admin/reviews" className="hover:text-primary">
               Reviews
             </Link>
-            <Link
-              href="/admin/flagged-numbers"
-              onClick={closeMenu}
-              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-            >
-              Flagged Numbers
+            <Link href="/admin/flagged-numbers" className="hover:text-primary">
+              Flagged numbers
             </Link>
-            <Link
-              href="/admin/reports"
-              onClick={closeMenu}
-              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/admin/reports" className="hover:text-primary">
               Reports
             </Link>
             <button
               type="button"
-              onClick={async () => {
-                closeMenu();
-                await handleSignOut();
-              }}
-              className="text-left text-muted-foreground hover:text-foreground"
+              onClick={handleSignOut}
+              className="mt-2 text-left text-sm font-medium text-muted-foreground hover:text-destructive"
             >
               Sign out
             </button>

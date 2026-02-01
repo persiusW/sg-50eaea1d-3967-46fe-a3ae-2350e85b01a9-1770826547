@@ -183,6 +183,7 @@ const AdminReportsPage: NextPage = () => {
     setError(null);
 
     const bodyLines = [
+      "Converted from report submission",
       `Report type: ${report.report_type}`,
       report.platform ? `Platform: ${report.platform}` : null,
       report.connected_page ? `Connected page: ${report.connected_page}` : null,
@@ -401,8 +402,7 @@ const AdminReportsPage: NextPage = () => {
                                   <p className="whitespace-pre-wrap">
                                     <span className="font-medium">
                                       Description:
-                                    </span>
-                                    {" "}
+                                    </span>{" "}
                                     {report.description}
                                   </p>
                                 </div>
