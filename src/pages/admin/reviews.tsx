@@ -12,6 +12,7 @@ interface ReviewRow {
   business_id: string;
   business_name: string;
   reviewer_phone: string;
+  reviewer_name: string | null;
   rating: number;
   body: string;
   created_at: string;
@@ -38,6 +39,7 @@ const AdminReviewsPage: NextPage = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [statusErrors, setStatusErrors] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -59,7 +61,7 @@ const AdminReviewsPage: NextPage = () => {
       const { data, error } = await supabase
         .from("reviews")
         .select(
-          "id,business_id,reviewer_phone,rating,body,status,created_at,businesses(name)"
+          "id,business_id,reviewer_phone,reviewer_name,rating,body,status,created_at,businesses(name)"
         )
         .order("created_at", { ascending: false });
 
@@ -70,6 +72,7 @@ const AdminReviewsPage: NextPage = () => {
           business_name:
             (row.businesses && (row.businesses as any).name) || "Unknown",
           reviewer_phone: row.reviewer_phone as string,
+          reviewer_name: (row.reviewer_name as string | null) ?? null,
           rating: row.rating as number,
           body: row.body as string,
           created_at: row.created_at as string,
@@ -131,7 +134,7 @@ const AdminReviewsPage: NextPage = () => {
       const { data } = await supabase
         .from("reviews")
         .select(
-          "id,business_id,reviewer_phone,rating,body,status,created_at,businesses(name)"
+          "id,business_id,reviewer_phone,reviewer_name,rating,body,status,created_at,businesses(name)"
         )
         .order("created_at", { ascending: false });
 
@@ -142,6 +145,7 @@ const AdminReviewsPage: NextPage = () => {
           business_name:
             (row.businesses && (row.businesses as any).name) || "Unknown",
           reviewer_phone: row.reviewer_phone as string,
+          reviewer_name: (row.reviewer_name as string | null) ?? null,
           rating: row.rating as number,
           body: row.body as string,
           created_at: row.created_at as string,
@@ -152,6 +156,24 @@ const AdminReviewsPage: NextPage = () => {
     }
     setDeletingId(null);
   };
+
+  const handleFilterByBusiness = (name: string) => {
+    setSearch(name);
+  };
+
+  const handleFilterByPhone = (phone: string) => {
+    setSearch(phone);
+  };
+
+  const filteredReviews = reviews.filter((rev) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (
+      rev.business_name.toLowerCase().includes(q) ||
+      (rev.reviewer_name || "").toLowerCase().includes(q) ||
+      rev.reviewer_phone.toLowerCase().includes(q)
+    );
+  });
 
   if (checkingAuth) {
     return (
@@ -183,6 +205,9 @@ const AdminReviewsPage: NextPage = () => {
               <h1 className="text-xl font-semibold tracking-tight">
                 Reviews (admin)
               </h1>
+              <p className="mt-0.5 text-xs font-semibold text-emerald-600">
+                UI v2: reviewer name + filters
+              </p>
               <p className="text-sm text-muted-foreground">
                 View and delete public reviews. Deletions are permanent.
               </p>
@@ -190,11 +215,31 @@ const AdminReviewsPage: NextPage = () => {
           </header>
 
           <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-medium">All reviews</p>
-              {loading && (
-                <p className="text-xs text-muted-foreground">Loading…</p>
-              )}
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                <div className="relative w-full sm:w-72">
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search by business, reviewer name, or phone…"
+                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  />
+                </div>
+                {search.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="self-start text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Clear
+                  </button>
+                )}
+                {loading && (
+                  <p className="text-xs text-muted-foreground">Loading…</p>
+                )}
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -203,6 +248,7 @@ const AdminReviewsPage: NextPage = () => {
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                     <th className="py-2 pr-3">Business</th>
                     <th className="py-2 px-3">Reviewer phone</th>
+                    <th className="py-2 px-3">Reviewer name</th>
                     <th className="py-2 px-3">Rating</th>
                     <th className="py-2 px-3">Review</th>
                     <th className="py-2 px-3">Status</th>
@@ -211,26 +257,49 @@ const AdminReviewsPage: NextPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {reviews.length === 0 ? (
+                  {filteredReviews.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="py-4 text-center text-xs text-muted-foreground"
                       >
-                        No reviews yet.
+                        {search.trim()
+                          ? "No reviews match this search."
+                          : "No reviews yet."}
                       </td>
                     </tr>
                   ) : (
-                    reviews.map((rev) => (
+                    filteredReviews.map((rev) => (
                       <tr
                         key={rev.id}
                         className="border-b border-border/60 align-top"
                       >
                         <td className="py-2 pr-3 font-medium">
-                          {rev.business_name}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleFilterByBusiness(rev.business_name)
+                            }
+                            className="text-left text-primary hover:underline"
+                          >
+                            {rev.business_name}
+                          </button>
                         </td>
                         <td className="py-2 px-3 whitespace-nowrap">
-                          {rev.reviewer_phone}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleFilterByPhone(rev.reviewer_phone)
+                            }
+                            className="text-primary hover:underline"
+                          >
+                            {rev.reviewer_phone}
+                          </button>
+                        </td>
+                        <td className="py-2 px-3 whitespace-nowrap">
+                          {rev.reviewer_name && rev.reviewer_name.trim()
+                            ? rev.reviewer_name
+                            : "—"}
                         </td>
                         <td className="py-2 px-3 whitespace-nowrap">
                           {rev.rating}/5
