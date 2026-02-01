@@ -25,6 +25,7 @@ interface BusinessListItem {
   verified: boolean;
   avg_rating: number;
   reviews_count: number;
+  location?: string | null;
 }
 
 const statusLabel: Record<Exclude<BusinessStatus, "VERIFIED">, string> = {
@@ -63,7 +64,7 @@ const BusinessesPage: NextPage = () => {
     let baseQuery = supabase.
     from("businesses_with_ratings").
     select(
-      "id,name,phone,category,status,verified,created_at,avg_rating,reviews_count"
+      "id,name,phone,category,location,status,verified,created_at,avg_rating,reviews_count"
     ).
     order("created_at", { ascending: false });
 
@@ -185,6 +186,7 @@ const BusinessesPage: NextPage = () => {
                       status={biz.status ?? null}
                       avgRating={biz.avg_rating ?? null}
                       reviewsCount={biz.reviews_count ?? null}
+                      location={biz.location ?? null}
                     />
                   ))}
                 </div>
@@ -194,7 +196,6 @@ const BusinessesPage: NextPage = () => {
         </div>
       </PublicLayout>
     </>);
-
 };
 
 export default BusinessesPage;
