@@ -73,6 +73,8 @@ const BusinessDetailPage: NextPage = () => {
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewMeta, setReviewMeta] = useState<Record<string, {earliestCreatedAt: string;count: number;}>>({});
+  const [flaggedPhones, setFlaggedPhones] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadingReviews, setLoadingReviews] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -130,6 +132,75 @@ const BusinessDetailPage: NextPage = () => {
 
     void fetchBusinessAndReviews();
   }, [id]);
+
+  useEffect(() => {
+    if (!reviews.length) {
+      setReviewMeta({});
+      setFlaggedPhones(new Set());
+      return;
+    }
+
+    const metaMap = new Map<string, {earliestCreatedAt: string;count: number;}>();
+
+    reviews.forEach((rev) => {
+      const phoneKey = rev.reviewer_phone?.trim();
+      if (!phoneKey) return;
+
+      const existing = metaMap.get(phoneKey);
+      if (!existing) {
+        metaMap.set(phoneKey, { earliestCreatedAt: rev.created_at, count: 1 });
+      } else {
+        const earliest =
+        new Date(rev.created_at) < new Date(existing.earliestCreatedAt) ?
+        rev.created_at :
+        existing.earliestCreatedAt;
+        metaMap.set(phoneKey, {
+          earliestCreatedAt: earliest,
+          count: existing.count + 1
+        });
+      }
+    });
+
+    const metaObj: Record<string, {earliestCreatedAt: string;count: number;}> = {};
+    metaMap.forEach((value, key) => {
+      metaObj[key] = value;
+    });
+    setReviewMeta(metaObj);
+
+    const uniquePhones = Array.from(
+      new Set(
+        reviews.
+        map((rev) => rev.reviewer_phone?.trim()).
+        filter((p): p is string => !!p)
+      )
+    );
+
+    const checkFlagged = async () => {
+      if (!uniquePhones.length) {
+        setFlaggedPhones(new Set());
+        return;
+      }
+
+      const { data, error } = await supabase.
+      from("flagged_numbers").
+      select("phone").
+      in("phone", uniquePhones);
+
+      if (error || !data) {
+        setFlaggedPhones(new Set());
+        return;
+      }
+
+      const flaggedSet = new Set<string>();
+      (data as any[]).forEach((row) => {
+        const p = (row.phone as string | null)?.trim();
+        if (p) flaggedSet.add(p);
+      });
+      setFlaggedPhones(flaggedSet);
+    };
+
+    void checkFlagged();
+  }, [reviews]);
 
   const handleFormChange = (
   field: keyof ReviewFormState,
@@ -193,7 +264,20 @@ const BusinessDetailPage: NextPage = () => {
     });
 
     if (error) {
-      setSubmitError("Failed to submit review. Please try again.");
+      const msg = error.message || "";
+      if (msg.includes("LIMIT_PER_BUSINESS_PHONE")) {
+        setSubmitError(
+          "Limit reached: you can post up to 5 reviews for this business per phone number."
+        );
+      } else if (msg.includes("LIMIT_PER_DAY_PHONE")) {
+        setSubmitError(
+          "Daily limit reached: you can post up to 5 reviews per day per phone number."
+        );
+      } else if (msg.includes("REVIEW_PHONE_REQUIRED")) {
+        setSubmitError("Phone number is required.");
+      } else {
+        setSubmitError("Unable to submit review. Please try again.");
+      }
       setSubmitting(false);
       return;
     }
@@ -431,7 +515,7 @@ Please keep contributions respectful, factual, and constructive.
                     <div className="space-y-1">
                       <label
                       htmlFor="body"
-                      className="block text-xs font-medium" style={{ textDecoration: "none", fontWeight: "500" }}>Review • Share only your genuine experience • Do not impersonate others or make false claims • Avoid abusive, threatening, or defamatory language • Submissions may be moderated or removed if they violate these guidelines.
+                      className="block text-xs font-medium" style={{ textDecoration: "none", fontWeight: "500" }}>Review • 
 
 
                     </label>
@@ -453,11 +537,34 @@ Please keep contributions respectful, factual, and constructive.
                       </p>
                   }
 
+                    <div className="mt-2 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                      <p className="font-medium text-xs">Review guidelines:</p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                        <li>Be respectful and factual</li>
+                        <li>Share your direct experience only</li>
+                        <li>Avoid personal or sensitive information</li>
+                      </ul>
+                    </div>
+
+                    <div className="mt-2 rounded-md bg-muted/30 p-2 text-[11px] text-muted-foreground">
+                      <p className="font-medium text-xs">How reviews work</p>
+                      <p className="mt-1">
+                        Reviews are tied to a phone number to help reduce misuse (phone numbers are not
+                        shown publicly).
+                      </p>
+                      <p className="mt-1">
+                        Review frequency is limited to help prevent spam.
+                      </p>
+                      <p className="mt-1">
+                        Status labels highlight patterns over time and may change as new reports come in.
+                      </p>
+                    </div>
+
                     <Button
                     type="submit"
                     size="sm"
                     disabled={submitting}
-                    className="mt-1">
+                    className="mt-2">
 
                       {submitting ? "Submitting…" : "Publish review"}
                     </Button>
@@ -483,24 +590,55 @@ Please keep contributions respectful, factual, and constructive.
                     </p> :
 
                 <div className="mt-3 space-y-3 text-xs">
-                      {reviews.map((review) =>
-                  <div
-                    key={review.id}
-                    className="rounded-md border border-border/70 bg-background/70 p-3">
+                      {reviews.map((review) => {
+                    const phoneKey = review.reviewer_phone?.trim() || "";
+                    let transparencyLabel: "First review" | "Updated opinion" | null = null;
 
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-medium">
-                              {review.reviewer_name?.trim() || "Unnamed reviewer"}
-                            </p>
+                    if (phoneKey && reviewMeta[phoneKey]) {
+                      const meta = reviewMeta[phoneKey];
+                      if (meta.count > 0) {
+                        if (review.created_at === meta.earliestCreatedAt) {
+                          transparencyLabel = "First review";
+                        } else {
+                          transparencyLabel = "Updated opinion";
+                        }
+                      }
+                    }
+
+                    const isFlagged =
+                    !!phoneKey && flaggedPhones.has(phoneKey);
+
+                    return (
+                      <div
+                        key={review.id}
+                        className="rounded-md border border-border/70 bg-background/70 p-3">
+
+                            <div className="flex items-center justify-between gap-2">
+                              <div>
+                                <p className="font-medium">
+                                  {review.reviewer_name?.trim() || "Unnamed reviewer"}
+                                </p>
+                                {transparencyLabel &&
                             <p className="text-[11px] text-muted-foreground">
-                              Rating: {review.rating}/5
+                                    {transparencyLabel}
+                                  </p>
+                            }
+                              </div>
+                              <p className="text-[11px] text-muted-foreground">
+                                Rating: {review.rating}/5
+                              </p>
+                            </div>
+                            <p className="mt-1 text-muted-foreground">
+                              {review.body}
                             </p>
-                          </div>
-                          <p className="mt-1 text-muted-foreground">
-                            {review.body}
-                          </p>
-                        </div>
-                  )}
+                            {isFlagged &&
+                        <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                                This number has been reported in other cases.
+                              </p>
+                        }
+                          </div>);
+
+                  })}
                     </div>
                 }
                 </div>
