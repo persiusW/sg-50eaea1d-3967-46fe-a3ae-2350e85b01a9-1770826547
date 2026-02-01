@@ -5,16 +5,16 @@ import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { PublicLayout } from "@/components/PublicLayout";
 
-const HomePage: NextPage = () => {
+const Home: NextPage = () => {
   return (
     <>
       <SEO
-        title="Transparent Turtle – Public business reviews and scam awareness"
-        description="Search businesses, read reviews, and see flagged phone numbers to stay ahead of scams."
+        title="Transparent Turtle – Business reviews and scam-awareness"
+        description="Search businesses, check trust signals, and share your experience to help others stay safe."
       />
       <PublicLayout>
-        <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-          <section className="space-y-6">
+        <main className="min-h-screen bg-background text-foreground">
+          <div className="container flex flex-col gap-10 py-10">
             <section className="border-b border-border bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.10),_transparent_55%)]">
               <div className="py-10 md:py-12">
                 <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2.2fr)]">
@@ -47,14 +47,24 @@ const HomePage: NextPage = () => {
                         </Button>
                         <Button
                           asChild
-                          variant="ghost"
+                          variant="outline"
                           size="lg"
-                          className="w-full text-primary sm:w-auto"
+                          className="w-full sm:w-auto"
                         >
-                          <Link href="/flagged-numbers">View flagged numbers</Link>
+                          <Link href="/report">Report a scam</Link>
                         </Button>
                       </div>
                     </div>
+
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Phone numbers are used to reduce misuse and are not shown publicly.
+                    </p>
+                    <Link
+                      href="/flagged-numbers"
+                      className="mt-2 inline-flex text-xs text-muted-foreground underline-offset-4 hover:underline"
+                    >
+                      View flagged numbers
+                    </Link>
                   </div>
 
                   <aside className="mt-4 w-full max-w-md rounded-lg border border-emerald-100 bg-card/70 p-4 shadow-sm backdrop-blur-sm dark:border-emerald-900/60 dark:bg-emerald-950/20 lg:mt-0 lg:ml-auto">
@@ -125,11 +135,46 @@ const HomePage: NextPage = () => {
                 </div>
               </div>
             </section>
-          </section>
-        </div>
+
+            <section className="border-t border-border pt-8">
+              <h2 className="text-lg font-semibold tracking-tight">
+                How it works
+              </h2>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <div className="rounded-lg border border-border bg-card p-4 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Step 1
+                  </p>
+                  <h3 className="mt-1 text-sm font-medium">Search</h3>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Look up a business or phone number.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Step 2
+                  </p>
+                  <h3 className="mt-1 text-sm font-medium">Check trust signals</h3>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Use ratings, verified records, and status badges to decide.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 text-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Step 3
+                  </p>
+                  <h3 className="mt-1 text-sm font-medium">Share or report</h3>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Leave a review, add a business, or submit a scam report.
+                  </p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
       </PublicLayout>
     </>
   );
 };
 
-export default HomePage;
+export default Home;
