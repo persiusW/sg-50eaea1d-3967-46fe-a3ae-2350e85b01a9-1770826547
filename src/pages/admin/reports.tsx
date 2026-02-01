@@ -5,14 +5,13 @@ import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
-import { Button } from "@/components/ui/button";
 
 type ReportStatus = "NEW" | "REVIEWING" | "RESOLVED" | "REJECTED";
 type ReportType = "PHONE" | "BUSINESS";
 
 type ScamReportRow = {
   id: string;
-  report_type: "PHONE" | "BUSINESS";
+  report_type: ReportType;
   platform: string | null;
   connected_page: string | null;
   description: string;
@@ -31,7 +30,7 @@ type ScamReportRow = {
 interface BusinessOption {
   id: string;
   name: string;
-  phone: string;
+  phone: string | null;
 }
 
 const PAGE_SIZE = 25;
@@ -42,7 +41,7 @@ interface ConvertState {
   expandedId: string | null;
   selectedBusinessId: string | null;
   businessSearch: string;
-  businessOptions: { id: string; name: string; phone: string | null }[];
+  businessOptions: BusinessOption[];
   conversionSavingId: string | null;
   conversionErrorById: Record<string, string | null>;
   createBusinessNameById: Record<string, string>;
@@ -56,19 +55,14 @@ const AdminReportsPage: NextPage = () => {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [statusSavingId, setStatusSavingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [businessSearch, setBusinessSearch] = useState("");
-  const [businessOptions, setBusinessOptions] = useState<BusinessOption[]>([]);
-  const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
-  const [conversionSavingId, setConversionSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
-  const [state, setState] = useState<ConvertState>({
+  const [convertState, setConvertState] = useState<ConvertState>({
     expandedId: null,
     selectedBusinessId: null,
     businessSearch: "",
@@ -79,65 +73,157 @@ const AdminReportsPage: NextPage = () => {
     createBusinessPhoneById: {},
   });
 
-  const { expandedId: expandedId2, selectedBusinessId: selectedBusinessId2, businessSearch: businessSearch2, businessOptions: businessOptions2, conversionSavingId: conversionSavingId2, conversionErrorById: conversionErrorById2, createBusinessNameById: createBusinessNameById2, createBusinessPhoneById: createBusinessPhoneById2 } = state;
+  const {
+    expandedId,
+    selectedBusinessId,
+    businessSearch,
+    businessOptions,
+    conversionSavingId,
+    conversionErrorById,
+    createBusinessNameById,
+    createBusinessPhoneById,
+  } = convertState;
 
-  const setExpandedId2 = (id: string | null) =>
-    setState((prev) => ({ ...prev, expandedId: id, selectedBusinessId: null }));
+  const setExpandedId = (id: string | null) =>
+    setConvertState((prev) => ({
+      ...prev,
+      expandedId: id,
+      // reset selection when toggling rows to avoid cross-row leaks
+      selectedBusinessId: null,
+      businessSearch: "",
+      businessOptions: [],
+    }));
 
-  const setSelectedBusinessId2 = (id: string | null) =>
-    setState((prev) => ({ ...prev, selectedBusinessId: id }));
+  const setSelectedBusinessId = (id: string | null) =>
+    setConvertState((prev) => ({
+      ...prev,
+      selectedBusinessId: id,
+    }));
 
-  const setBusinessSearch2 = (value: string) =>
-    setState((prev) => ({ ...prev, businessSearch: value }));
+  const setBusinessSearch = (value: string) =>
+    setConvertState((prev) => ({
+      ...prev,
+      businessSearch: value,
+    }));
 
-  const setBusinessOptions2 = (options: { id: string; name: string; phone: string | null }[]) =>
-    setState((prev) => ({ ...prev, businessOptions: options }));
+  const setBusinessOptions = (options: BusinessOption[]) =>
+    setConvertState((prev) => ({
+      ...prev,
+      businessOptions: options,
+    }));
 
-  const setConversionSavingId2 = (id: string | null) =>
-    setState((prev) => ({ ...prev, conversionSavingId: id }));
+  const setConversionSavingId = (id: string | null) =>
+    setConvertState((prev) => ({
+      ...prev,
+      conversionSavingId: id,
+    }));
 
-  const setConversionErrorForId2 = (id: string, message: string | null) =>
-    setState((prev) => ({
+  const setConversionErrorForId = (id: string, message: string | null) =>
+    setConvertState((prev) => ({
       ...prev,
       conversionErrorById: { ...prev.conversionErrorById, [id]: message },
     }));
 
-  const setCreateBusinessNameForId2 = (id: string, value: string) =>
-    setState((prev) => ({
+  const setCreateBusinessNameForId = (id: string, value: string) =>
+    setConvertState((prev) => ({
       ...prev,
       createBusinessNameById: { ...prev.createBusinessNameById, [id]: value },
     }));
 
-  const setCreateBusinessPhoneForId2 = (id: string, value: string) =>
-    setState((prev) => ({
+  const setCreateBusinessPhoneForId = (id: string, value: string) =>
+    setConvertState((prev) => ({
       ...prev,
       createBusinessPhoneById: { ...prev.createBusinessPhoneById, [id]: value },
     }));
 
-  const handleSearchBusinesses2 = async () => {
-    const term = businessSearch2.trim();
-    if (!term) {
-      setBusinessOptions2([]);
-      return;
+  useEffect(() => {
+    const checkAuth = async () => {
+      const session = await authService.getCurrentSession();
+      if (!session) {
+        router.replace("/admin/login");
+        return;
+      }
+      setCheckingAuth(false);
+    };
+    void checkAuth();
+  }, [router]);
+
+  const fetchReports = async (pageToLoad: number) => {
+    setLoading(true);
+    const from = (pageToLoad - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const { data, error: fetchError } = await supabase
+      .from("scam_reports")
+      .select(
+        "id,report_type,phone,name_on_number,connected_page,platform,description,submitter_name,submitter_phone,evidence_url,status,business_id,converted_review_id,converted_at,created_at",
+      )
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (fetchError) {
+      setReports([]);
+      setHasMore(false);
+    } else if (data) {
+      setReports(data as ScamReportRow[]);
+      setHasMore(data.length === PAGE_SIZE);
+    } else {
+      setReports([]);
+      setHasMore(false);
     }
-
-    const { data, error } = await supabase
-      .from("businesses")
-      .select("id, name, phone")
-      .or(`name.ilike.%${term}%,phone.ilike.%${term}%`)
-      .order("name", { ascending: true })
-      .limit(20);
-
-    if (error) {
-      console.error(error);
-      setBusinessOptions2([]);
-      return;
-    }
-
-    setBusinessOptions2(data ?? []);
+    setSelectedIds([]);
+    setLoading(false);
   };
 
-  const formatConvertedBody2 = (report: ScamReportRow): string => {
+  useEffect(() => {
+    if (checkingAuth) return;
+    void fetchReports(page);
+  }, [checkingAuth, page]);
+
+  const handleStatusChange = async (
+    reportId: string,
+    nextStatus: ReportStatus,
+  ) => {
+    setStatusSavingId(reportId);
+    await supabase.from("scam_reports").update({ status: nextStatus }).eq("id", reportId);
+    await fetchReports(page);
+    setStatusSavingId(null);
+  };
+
+  const handleDelete = async (reportId: string) => {
+    const confirmed = window.confirm(
+      "Delete this report? This action cannot be undone.",
+    );
+    if (!confirmed) return;
+    setDeleteId(reportId);
+    await supabase.from("scam_reports").delete().eq("id", reportId);
+    await fetchReports(page);
+    setDeleteId(null);
+  };
+
+  const handleSearchBusinesses = async () => {
+    setError(null);
+    const term = businessSearch.trim();
+    if (!term) {
+      setBusinessOptions([]);
+      return;
+    }
+    const { data, error: bizError } = await supabase
+      .from("businesses")
+      .select("id,name,phone")
+      .or(`name.ilike.%${term}%,phone.ilike.%${term}%`)
+      .order("created_at", { ascending: false })
+      .limit(25);
+
+    if (bizError) {
+      setError("Could not search businesses.");
+      setBusinessOptions([]);
+      return;
+    }
+    setBusinessOptions((data || []) as BusinessOption[]);
+  };
+
+  const formatConvertedBody = (report: ScamReportRow): string => {
     const lines: string[] = [];
 
     lines.push("Converted from report submission", "");
@@ -162,29 +248,33 @@ const AdminReportsPage: NextPage = () => {
     return lines.join("\n");
   };
 
-  const createBusinessAndConvert2 = async (report: ScamReportRow) => {
-    setConversionErrorForId2(report.id, null);
+  const createBusinessAndConvert = async (report: ScamReportRow) => {
+    // if an existing business is selected, do not allow create path
+    if (selectedBusinessId) {
+      return;
+    }
 
-    const existingName = (createBusinessNameById2[report.id] || "").trim();
+    setConversionErrorForId(report.id, null);
+
+    const existingName = (createBusinessNameById[report.id] || "").trim();
     const defaultName =
       report.connected_page?.trim() ||
       report.name_on_number?.trim() ||
       "Unknown business";
     const nameToUse = (existingName || defaultName).trim();
 
-    const existingPhoneState = (createBusinessPhoneById2[report.id] || "").trim();
-    const phoneFromReport = report.submitter_phone?.trim() || report.connected_page?.trim() || null;
-    const phoneToUse = (report.submitter_phone?.trim() || existingPhoneState).trim();
+    const existingPhoneState = (createBusinessPhoneById[report.id] || "").trim();
+    const phoneToUse = (report.phone?.trim() || existingPhoneState).trim();
 
     if (!nameToUse || !phoneToUse) {
-      setConversionErrorForId2(
+      setConversionErrorForId(
         report.id,
         "Business name and phone are required to create a business from this report.",
       );
       return;
     }
 
-    setConversionSavingId2(report.id);
+    setConversionSavingId(report.id);
 
     let businessId: string | null = null;
 
@@ -196,8 +286,11 @@ const AdminReportsPage: NextPage = () => {
 
     if (bizError) {
       console.error(bizError);
-      setConversionErrorForId2(report.id, "Could not look up business by phone.");
-      setConversionSavingId2(null);
+      setConversionErrorForId(
+        report.id,
+        "Could not look up business by phone.",
+      );
+      setConversionSavingId(null);
       return;
     }
 
@@ -223,15 +316,18 @@ const AdminReportsPage: NextPage = () => {
 
       if (insertBizError || !newBiz) {
         console.error(insertBizError);
-        setConversionErrorForId2(report.id, "Could not create business from report.");
-        setConversionSavingId2(null);
+        setConversionErrorForId(
+          report.id,
+          "Could not create business from report.",
+        );
+        setConversionSavingId(null);
         return;
       }
 
       businessId = newBiz.id as string;
     }
 
-    const body = formatConvertedBody2(report);
+    const body = formatConvertedBody(report);
 
     const { data: reviewData, error: insertError } = await supabase
       .from("reviews")
@@ -247,8 +343,8 @@ const AdminReportsPage: NextPage = () => {
 
     if (insertError || !reviewData) {
       console.error(insertError);
-      setConversionErrorForId2(report.id, "Could not convert to review.");
-      setConversionSavingId2(null);
+      setConversionErrorForId(report.id, "Could not convert to review.");
+      setConversionSavingId(null);
       return;
     }
 
@@ -266,192 +362,13 @@ const AdminReportsPage: NextPage = () => {
 
     if (updateError) {
       console.error(updateError);
-      setConversionErrorForId2(report.id, "Could not mark report as resolved.");
-      setConversionSavingId2(null);
-      return;
-    }
-
-    await fetchReports(page);
-    setConversionSavingId2(null);
-  };
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const session = await authService.getCurrentSession();
-      if (!session) {
-        router.replace("/admin/login");
-        return;
-      }
-      setCheckingAuth(false);
-    };
-    void checkAuth();
-  }, [router]);
-
-  const fetchReports = async (pageToLoad: number) => {
-    setLoading(true);
-    const from = (pageToLoad - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-
-    const { data, error: fetchError } = await supabase
-      .from("scam_reports")
-      .select(
-        "id,report_type,phone,name_on_number,connected_page,platform,description,submitter_name,submitter_phone,evidence_url,status,business_id,converted_review_id,converted_at,created_at"
-      )
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (fetchError) {
-      setReports([]);
-      setHasMore(false);
-    } else if (data) {
-      setReports(data as ScamReportRow[]);
-      setHasMore(data.length === PAGE_SIZE);
-    } else {
-      setReports([]);
-      setHasMore(false);
-    }
-    setSelectedIds([]);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (checkingAuth) return;
-    void fetchReports(page);
-  }, [checkingAuth, page]);
-
-  const handleStatusChange = async (reportId: string, nextStatus: ReportStatus) => {
-    setStatusSavingId(reportId);
-    await supabase
-      .from("scam_reports")
-      .update({ status: nextStatus })
-      .eq("id", reportId);
-    await fetchReports(page);
-    setStatusSavingId(null);
-  };
-
-  const handleDelete = async (reportId: string) => {
-    const confirmed = window.confirm("Delete this report? This action cannot be undone.");
-    if (!confirmed) return;
-    setDeleteId(reportId);
-    await supabase.from("scam_reports").delete().eq("id", reportId);
-    await fetchReports(page);
-    setDeleteId(null);
-  };
-
-  const searchBusinesses = async () => {
-    setError(null);
-    const term = businessSearch.trim();
-    if (!term) {
-      setBusinessOptions([]);
-      return;
-    }
-    const { data, error: bizError } = await supabase
-      .from("businesses")
-      .select("id,name,phone")
-      .or(`name.ilike.%${term}%,phone.ilike.%${term}%`)
-      .order("created_at", { ascending: false })
-      .limit(25);
-
-    if (bizError) {
-      setError("Could not search businesses.");
-      setBusinessOptions([]);
-      return;
-    }
-    setBusinessOptions((data || []) as BusinessOption[]);
-  };
-
-  const convertToFlagged = async (report: ScamReportRow) => {
-    if (!report.phone) return;
-    setConversionSavingId(report.id);
-    setError(null);
-
-    const payload = {
-      phone: report.phone,
-      name_on_number: report.name_on_number,
-      connected_page: report.connected_page,
-      admin_note: report.description,
-      status: "UNDER_REVIEW",
-      verified: true,
-    };
-
-    const { error: upsertError } = await supabase
-      .from("flagged_numbers")
-      .upsert(payload, { onConflict: "phone" });
-
-    if (upsertError) {
-      setError("Could not convert to flagged number.");
+      setConversionErrorForId(
+        report.id,
+        "Could not mark report as resolved.",
+      );
       setConversionSavingId(null);
       return;
     }
-
-    await supabase
-      .from("scam_reports")
-      .update({
-        status: "RESOLVED",
-        converted_at: new Date().toISOString(),
-      })
-      .eq("id", report.id);
-
-    await fetchReports(page);
-    setConversionSavingId(null);
-  };
-
-  const convertToReview = async (report: ScamReportRow) => {
-    if (!selectedBusinessId && !report.id) return;
-    setConversionSavingId(report.id);
-    setError(null);
-
-    const bodyLines: string[] = [];
-
-    bodyLines.push("Converted from report submission", "");
-
-    bodyLines.push(`Report type: ${report.report_type}`);
-
-    if (report.platform) {
-      bodyLines.push(`Platform: ${report.platform}`);
-    }
-    if (report.connected_page) {
-      bodyLines.push(`Connected page: ${report.connected_page}`);
-    }
-
-    bodyLines.push("");
-    bodyLines.push("Details:");
-    bodyLines.push(report.description || "");
-
-    if (report.evidence_url) {
-      bodyLines.push("");
-      bodyLines.push(`Evidence: ${report.evidence_url}`);
-    }
-
-    const body = bodyLines.join("\n");
-
-    const { data: reviewData, error: insertError } = await supabase
-      .from("reviews")
-      .insert({
-        business_id: selectedBusinessId,
-        reviewer_name: report.submitter_name,
-        reviewer_phone: report.submitter_phone,
-        rating: 1,
-        body,
-      })
-      .select("id")
-      .single();
-
-    if (insertError || !reviewData) {
-      setError("Could not convert to review.");
-      setConversionSavingId(null);
-      return;
-    }
-
-    await supabase
-      .from("scam_reports")
-      .update({
-        business_id: selectedBusinessId,
-        converted_review_id: reviewData.id as string,
-        converted_at: new Date().toISOString(),
-        status: "RESOLVED",
-      })
-      .eq("id", report.id);
 
     await fetchReports(page);
     setConversionSavingId(null);
@@ -470,22 +387,22 @@ const AdminReportsPage: NextPage = () => {
 
     setReports((prev) =>
       prev.map((r) =>
-        selectedIds.includes(r.id) ? { ...r, status: nextStatus } : r
-      )
+        selectedIds.includes(r.id) ? { ...r, status: nextStatus } : r,
+      ),
     );
 
-    const { error } = await supabase
+    const { error: supaError } = await supabase
       .from("scam_reports")
       .update({ status: nextStatus })
       .in("id", selectedIds);
 
-    if (error) {
+    if (supaError) {
       setBulkError("Could not update selected reports. Changes reverted.");
       setReports((prev) =>
         prev.map((r) => ({
           ...r,
           status: prevById.get(r.id) ?? r.status,
-        }))
+        })),
       );
     } else {
       setSelectedIds([]);
@@ -515,7 +432,8 @@ const AdminReportsPage: NextPage = () => {
     allVisibleIds.length > 0 &&
     allVisibleIds.every((id) => selectedIds.includes(id));
   const someSelectedOnPage =
-    allVisibleIds.some((id) => selectedIds.includes(id)) && !allSelectedOnPage;
+    allVisibleIds.some((id) => selectedIds.includes(id)) &&
+    !allSelectedOnPage;
 
   return (
     <>
@@ -557,7 +475,9 @@ const AdminReportsPage: NextPage = () => {
                   <button
                     type="button"
                     disabled={bulkSaving}
-                    onClick={() => void handleBulkUpdateReportStatus("REVIEWING")}
+                    onClick={() =>
+                      void handleBulkUpdateReportStatus("REVIEWING")
+                    }
                     className="rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800 disabled:opacity-60 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
                   >
                     Set REVIEWING
@@ -565,7 +485,9 @@ const AdminReportsPage: NextPage = () => {
                   <button
                     type="button"
                     disabled={bulkSaving}
-                    onClick={() => void handleBulkUpdateReportStatus("RESOLVED")}
+                    onClick={() =>
+                      void handleBulkUpdateReportStatus("RESOLVED")
+                    }
                     className="rounded-full border border-emerald-500 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800 disabled:opacity-60 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100"
                   >
                     Set RESOLVED
@@ -573,7 +495,9 @@ const AdminReportsPage: NextPage = () => {
                   <button
                     type="button"
                     disabled={bulkSaving}
-                    onClick={() => void handleBulkUpdateReportStatus("REJECTED")}
+                    onClick={() =>
+                      void handleBulkUpdateReportStatus("REJECTED")
+                    }
                     className="rounded-full border border-red-400 bg-red-50 px-2 py-0.5 text-[10px] text-red-700 disabled:opacity-60 dark:border-red-500 dark:bg-red-950/40 dark:text-red-200"
                   >
                     Set REJECTED
@@ -635,7 +559,8 @@ const AdminReportsPage: NextPage = () => {
                   ) : (
                     reports.map((report) => {
                       const isExpanded = expandedId === report.id;
-                      const conversionError = conversionErrorById[report.id] ?? null;
+                      const conversionError =
+                        conversionErrorById[report.id] ?? null;
 
                       const defaultName =
                         report.connected_page?.trim() ||
@@ -712,18 +637,14 @@ const AdminReportsPage: NextPage = () => {
                               <div className="flex flex-wrap gap-1">
                                 <button
                                   type="button"
-                                  onClick={() => setExpandedId(isExpanded ? null : report.id)}
+                                  onClick={() =>
+                                    setExpandedId(
+                                      isExpanded ? null : report.id,
+                                    )
+                                  }
                                   className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
                                 >
                                   {isExpanded ? "Hide" : "View"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => void convertToFlagged(report)}
-                                  disabled={!report.phone || conversionSavingId === report.id}
-                                  className="rounded-md border border-border bg-background px-2 py-1 text-[11px] disabled:opacity-60"
-                                >
-                                  Flag number
                                 </button>
                                 <button
                                   type="button"
@@ -791,7 +712,9 @@ const AdminReportsPage: NextPage = () => {
                                           className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-[11px]"
                                           placeholder="Search by name or phone"
                                           value={businessSearch}
-                                          onChange={(e) => setBusinessSearch(e.target.value)}
+                                          onChange={(e) =>
+                                            setBusinessSearch(e.target.value)
+                                          }
                                         />
                                         <button
                                           type="button"
@@ -851,7 +774,9 @@ const AdminReportsPage: NextPage = () => {
                                         <input
                                           type="text"
                                           className="block w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
-                                          value={report.phone ?? createPhoneValue}
+                                          value={
+                                            report.phone ?? createPhoneValue
+                                          }
                                           onChange={(e) =>
                                             !report.phone &&
                                             setCreateBusinessPhoneForId(
