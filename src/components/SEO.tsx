@@ -9,8 +9,8 @@ interface SEOProps {
 
 // SEO elements that can be used in _document.tsx (returns JSX without Head wrapper)
 export function SEOElements({
-  title = "Hello World",
-  description = "Welcome to my app",
+  title = "Transparent Turtle",
+  description = "Transparent Turtle is a public transparency and accountability platform that helps people verify businesses, identify scams, and make safer decisions through open reviews, verified records, and fraud intelligence.",
   image = "/og-image.png",
   url,
 }: SEOProps) {
