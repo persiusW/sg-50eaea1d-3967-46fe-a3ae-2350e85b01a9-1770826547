@@ -151,39 +151,55 @@ export default function BusinessesPage() {
               )}
               {!loading && businesses.length > 0 && (
                 <div className="space-y-2 text-xs sm:text-sm">
-                  {businesses.map((biz) => (
-                    <Link
-                      key={biz.id}
-                      href={`/businesses/${biz.id}`}
-                      className="flex flex-col gap-1 rounded-md border border-border/70 bg-background/70 p-3 transition hover:bg-muted/70"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium">{biz.name}</p>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {biz.status && (
-                            <Badge
-                              className={
-                                "border " +
-                                (statusBadgeClass[
-                                  biz.status
-                                ] || "bg-muted text-foreground")
-                              }
-                            >
-                              {statusLabel[biz.status] ?? "Status"}
-                            </Badge>
+                  {businesses.length === 0 ? (
+                    <p className="text-muted-foreground">
+                      No businesses found yet. Try a different search or{" "}
+                      <Link
+                        href="/businesses/add"
+                        className="underline underline-offset-4"
+                      >
+                        add a new business
+                      </Link>
+                      .
+                    </p>
+                  ) : (
+                    businesses.map((biz) => (
+                      <tr
+                        key={biz.id}
+                        className="border-b border-border/60"
+                      >
+                        <td className="py-2 pr-3 align-middle">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {biz.name}
+                            </span>
+                            {biz.verified && (
+                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700/60">
+                                Verified
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            {biz.phone}
+                          </div>
+                        </td>
+                        <td className="py-2 px-3 align-middle">
+                          {biz.category}
+                        </td>
+                        <td className="py-2 px-3 align-middle">
+                          {biz.status ? (
+                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {statusLabel[biz.status] ?? biz.status}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">
+                              No status
+                            </span>
                           )}
-                          {biz.verified && (
-                            <Badge className="bg-emerald-600 text-emerald-50">
-                              Verified
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Category: {biz.category} • Phone: {biz.phone}
-                      </p>
-                    </Link>
-                  ))}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </div>
               )}
             </div>

@@ -7,154 +7,126 @@ export default function Home() {
   return (
     <>
       <SEO
-        title="Transparent Turtle – Public Business Reviews & Scam Awareness"
-        description="Transparent Turtle is a public, account-free platform for business reviews, scam awareness, and verified flagged numbers. Built for transparency and trust."
-      />
+        title="Transparent Turtle – Ghana’s Most Trusted Business Directory"
+        description="Discover trusted businesses across Ghana. Read authentic reviews, avoid scams, and check flagged phone numbers connected to fraud." />
+
       <main className="min-h-screen bg-background text-foreground">
-        <div className="container flex min-h-screen flex-col py-10 gap-10">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <span className="text-xl font-semibold">TT</span>
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold tracking-tight">
-                  Transparent Turtle
+        <div className="min-h-screen">
+          <section className="border-b border-border bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.10),_transparent_55%)]">
+            <div className="container flex flex-col gap-10 py-16 md:flex-row md:items-start md:py-20">
+              <div className="max-w-2xl space-y-6">
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700/60">Public. Transparent. Verified records.
+
+                </span>
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
+                  Ghana’s Most Trusted Business Directory
                 </h1>
-                <p className="text-xs text-muted-foreground">
-                  See through scams. Reward honest businesses.
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 sm:text-base">
+                  Discover trusted businesses across Ghana.
                 </p>
-              </div>
-            </div>
-            <nav className="hidden text-sm md:flex items-center gap-6 text-muted-foreground">
-              <Link href="/businesses" className="hover:text-foreground">
-                Search
-              </Link>
-              <Link href="/businesses/add" className="hover:text-foreground">
-                Add business
-              </Link>
-              <Link href="/flagged-numbers" className="hover:text-foreground">
-                Flagged numbers
-              </Link>
-            </nav>
-          </header>
+                <p className="max-w-xl text-sm text-muted-foreground sm:text-base">
+                  Read authentic reviews, avoid scams, and make informed decisions. Transparent Turtle helps Ghanaians verify businesses, check flagged phone numbers, and spot fraud patterns—so you can transact with confidence.
+                </p>
 
-          <section className="grid flex-1 gap-10 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] items-center">
-            <div className="space-y-6">
-              <p className="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-                Public. Transparent. No user accounts.
-              </p>
-              <h2 className="max-w-xl text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
-                A public ledger for{" "}
-                <span className="underline decoration-primary decoration-2 underline-offset-4">
-                  honest businesses
-                </span>{" "}
-                and known scams.
-              </h2>
-              <p className="max-w-xl text-sm sm:text-base text-muted-foreground">
-                Transparent Turtle lets anyone look up a business or phone
-                number, share real experiences, and see patterns in reported
-                scams. No accounts. No dark patterns. Just a clear record the
-                community and admins can trust.
-              </p>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Button asChild size="lg" className="w-full sm:w-auto">
-                  <Link href="/businesses">Search businesses</Link>
-                </Button>
-                <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="lg"
-                    className="w-full sm:w-auto"
-                  >
-                    <Link href="/businesses/add">Add a business</Link>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Button asChild size="lg" className="w-full sm:w-auto">
+                    <Link href="/businesses">Search businesses</Link>
                   </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    size="lg"
-                    className="w-full sm:w-auto text-primary"
-                  >
-                    <Link href="/flagged-numbers">View flagged numbers</Link>
-                  </Button>
+                  <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="lg"
+                      className="w-full sm:w-auto">
+
+                      <Link href="/businesses/add">Add a business</Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="lg"
+                      className="w-full sm:w-auto text-primary">
+
+                      <Link href="/flagged-numbers">View flagged numbers</Link>
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3 text-xs sm:text-sm">
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <p className="font-medium">No accounts, no friction</p>
-                  <p className="mt-1 text-muted-foreground">
-                    Anyone can leave a review or report with just a name and
-                    phone. Admins handle moderation and verification.
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <p className="font-medium">Status &amp; verification badges</p>
-                  <p className="mt-1 text-muted-foreground">
-                    Clear labels like “Under review”, “Pattern match: scam”, and
-                    “Verified” show the current risk level at a glance.
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-4">
-                  <p className="font-medium">Public flagged numbers</p>
-                  <p className="mt-1 text-muted-foreground">
-                    A searchable list of phone numbers linked to scams or
-                    high-risk activity, managed by trusted admins.
-                  </p>
-                </div>
-              </div>
-            </div>
+              {/* Live snapshot – static sample UI only */}
+              <aside className="mt-4 w-full max-w-md rounded-lg border border-emerald-100 bg-card/70 p-4 shadow-sm backdrop-blur-sm dark:border-emerald-900/60 dark:bg-emerald-950/20 md:mt-0 md:ml-auto">
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                  Live snapshot · Example records
+                </h2>
 
-            <aside className="relative">
-              <div className="absolute -inset-6 -z-10 rounded-3xl bg-gradient-to-b from-primary/5 via-transparent to-primary/10" />
-              <div className="rounded-3xl border border-border bg-card/60 p-5 shadow-sm backdrop-blur">
-                <h3 className="text-sm font-semibold tracking-tight text-muted-foreground">
-                  Live snapshot
-                </h3>
-                <div className="mt-4 space-y-4 text-xs">
-                  <div className="flex items-start justify-between gap-3 rounded-xl bg-muted/60 p-3">
-                    <div>
-                      <p className="font-medium">Sample Logistics Ltd</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Category: Delivery • Phone: +1 (555) 201-8890
+                <div className="mt-3 space-y-3 text-xs sm:text-sm">
+                  {/* Sample Business Card */}
+                  <div className="rounded-md border border-border bg-background p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">Food Scape
+
                       </p>
+                      <span className="inline-flex items-center rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-emerald-50">
+                        Verified
+                      </span>
                     </div>
-                    <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
-                      Verified
-                    </span>
-                  </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">Category: Catering · Phone: +233 538 530 352
 
-                  <div className="flex items-start justify-between gap-3 rounded-xl bg-muted/40 p-3">
-                    <div>
-                      <p className="font-medium">
-                        &quot;Bank Support&quot; Caller
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Number: +1 (555) 990-1234
-                      </p>
-                      <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
-                        Multiple independent reports of phishing calls.
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300 text-right">
-                      Pattern match:
-                      <br />
-                      known scam
-                    </span>
-                  </div>
-
-                  <div className="rounded-xl border border-dashed border-border/70 bg-background/70 p-3">
-                    <p className="text-[11px] text-muted-foreground">
-                      Transparent Turtle combines public reports with
-                      admin-controlled verification. Businesses created by admins
-                      start Verified; suspicious patterns escalate risk badges.
                     </p>
                   </div>
+
+                  {/* Sample Flagged Entry */}
+                  <div className="rounded-md border border-amber-200 bg-amber-50/80 p-3 dark:border-amber-700/60 dark:bg-amber-900/20">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">“Lottery Number” Caller
+
+                      </p>
+                      <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-500/40 dark:bg-amber-900/40 dark:text-amber-200">
+                        Pattern match: known scam
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Number: +233 555 990 1234
+                    </p>
+                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-200">
+                      Multiple independent reports of phishing calls.
+                    </p>
+                  </div>
+
+                  {/* Helper text */}
+                  <p className="mt-2 rounded-md border border-dashed border-border bg-background/60 p-2 text-[11px] text-muted-foreground">
+                    Transparent Turtle combines public reports with admin-controlled
+                    verification. Businesses created by admins start Verified; suspicious
+                    patterns escalate risk badges.
+                  </p>
                 </div>
+              </aside>
+            </div>
+          </section>
+
+          <section className="border-b border-border bg-card/40">
+            <div className="container py-10 md:py-14">
+              <div className="grid gap-6 md:grid-cols-3">
+                <article className="rounded-lg border border-border bg-background p-4 shadow-sm">
+                  <h3 className="text-sm font-semibold">Public reviews</h3>
+                  <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
+                    Read and share real experiences from people across Ghana. Reviews publish openly, with moderation handled by trusted admins.
+                  </p>
+                </article>
+                <article className="rounded-lg border border-border bg-background p-4 shadow-sm">
+                  <h3 className="text-sm font-semibold">Status &amp; verification</h3>
+                  <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
+                    Clear badges like Verified, Under Review, Multiple Reports, and Pattern Match show a business’s current trust level at a glance.
+                  </p>
+                </article>
+                <article className="rounded-lg border border-border bg-background p-4 shadow-sm">
+                  <h3 className="text-sm font-semibold">Flagged numbers</h3>
+                  <p className="mt-2 text-xs text-muted-foreground sm:text-sm">
+                    A searchable list of phone numbers linked to scams or high-risk activity, reviewed and managed by admins.
+                  </p>
+                </article>
               </div>
-            </aside>
+            </div>
           </section>
 
           <footer className="mt-2 flex flex-col items-start justify-between gap-2 border-t border-border pt-4 text-xs text-muted-foreground sm:flex-row sm:items-center">
@@ -169,6 +141,6 @@ export default function Home() {
           </footer>
         </div>
       </main>
-    </>
-  );
+    </>);
+
 }
