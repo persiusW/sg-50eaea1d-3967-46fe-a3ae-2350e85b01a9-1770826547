@@ -16,33 +16,33 @@ export function AdminNav(): JSX.Element {
 
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex w-full max-w-screen-xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-screen-xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <div className="shrink-0 text-sm font-semibold">
           <Link href="/admin" className="whitespace-nowrap">
-            Transparent Turtle · Admin
+            Transparent Turtle · Admin (NAV-TEST)
           </Link>
         </div>
 
-        <nav className="hidden items-center gap-4 text-sm font-medium text-foreground/90 md:flex">
-          <Link href="/admin" className="hover:text-primary">
+        <nav className="hidden flex-1 items-center justify-end gap-4 text-sm font-medium text-foreground/90 sm:flex">
+          <Link href="/admin" className="whitespace-nowrap hover:text-primary">
             Overview
           </Link>
-          <Link href="/admin/businesses" className="hover:text-primary">
+          <Link href="/admin/businesses" className="whitespace-nowrap hover:text-primary">
             Businesses
           </Link>
-          <Link href="/admin/reviews" className="hover:text-primary">
+          <Link href="/admin/reviews" className="whitespace-nowrap hover:text-primary">
             Reviews
           </Link>
-          <Link href="/admin/flagged-numbers" className="hover:text-primary">
+          <Link href="/admin/flagged-numbers" className="whitespace-nowrap hover:text-primary">
             Flagged numbers
           </Link>
-          <Link href="/admin/reports" className="hover:text-primary">
+          <Link href="/admin/reports" className="whitespace-nowrap hover:text-primary">
             Reports
           </Link>
           <button
             type="button"
             onClick={handleSignOut}
-            className="text-sm font-medium text-muted-foreground hover:text-destructive"
+            className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-destructive"
           >
             Sign out
           </button>
