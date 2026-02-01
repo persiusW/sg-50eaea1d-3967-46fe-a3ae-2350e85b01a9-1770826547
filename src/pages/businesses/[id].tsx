@@ -431,10 +431,10 @@ Please keep contributions respectful, factual, and constructive.
                     <div className="space-y-1">
                       <label
                       htmlFor="body"
-                      className="block text-xs font-medium">
+                      className="block text-xs font-medium" style={{ textDecoration: "none", fontWeight: "500" }}>Review • Share only your genuine experience • Do not impersonate others or make false claims • Avoid abusive, threatening, or defamatory language • Submissions may be moderated or removed if they violate these guidelines.
 
-                        Review
-                      </label>
+
+                    </label>
                       <Textarea
                       id="body"
                       value={form.body}
