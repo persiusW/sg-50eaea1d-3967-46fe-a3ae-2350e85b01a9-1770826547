@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
+import { AdminNav } from "@/components/AdminNav";
 
 interface FlaggedNumber {
   id: string;
@@ -194,11 +195,6 @@ const AdminFlaggedNumbersPage: NextPage = () => {
     setDeletingId(null);
   };
 
-  const handleSignOut = async () => {
-    await authService.signOut();
-    router.replace("/admin/login");
-  };
-
   if (checkingAuth) {
     return (
       <>
@@ -223,6 +219,7 @@ const AdminFlaggedNumbersPage: NextPage = () => {
       />
       <main className="min-h-screen bg-background text-foreground">
         <div className="container flex min-h-screen flex-col gap-6 py-8">
+          <AdminNav />
           <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-xl font-semibold tracking-tight">
@@ -233,29 +230,6 @@ const AdminFlaggedNumbersPage: NextPage = () => {
                 treated as verified and admin-created. Admin notes are not
                 shown on the public page.
               </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/admin/businesses")}
-              >
-                Businesses
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/admin/reviews")}
-              >
-                Reviews
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-              >
-                Sign out
-              </Button>
             </div>
           </header>
 

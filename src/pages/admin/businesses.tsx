@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
+import { AdminNav } from "@/components/AdminNav";
 
 type BusinessStatus =
   | "UNDER_REVIEW"
@@ -255,6 +256,7 @@ const AdminBusinessesPage: NextPage = () => {
       />
       <main className="min-h-screen bg-background text-foreground">
         <div className="container flex min-h-screen flex-col gap-6 py-8">
+          <AdminNav />
           <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-xl font-semibold tracking-tight">
@@ -272,13 +274,6 @@ const AdminBusinessesPage: NextPage = () => {
                 onClick={startCreate}
               >
                 New business
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-              >
-                Sign out
               </Button>
             </div>
           </header>

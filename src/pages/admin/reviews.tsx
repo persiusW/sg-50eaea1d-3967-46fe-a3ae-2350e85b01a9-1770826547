@@ -5,6 +5,7 @@ import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
+import { AdminNav } from "@/components/AdminNav";
 
 interface ReviewRow {
   id: string;
@@ -104,11 +105,6 @@ const AdminReviewsPage: NextPage = () => {
     setDeletingId(null);
   };
 
-  const handleSignOut = async () => {
-    await authService.signOut();
-    router.replace("/admin/login");
-  };
-
   if (checkingAuth) {
     return (
       <>
@@ -133,6 +129,7 @@ const AdminReviewsPage: NextPage = () => {
       />
       <main className="min-h-screen bg-background text-foreground">
         <div className="container flex min-h-screen flex-col gap-6 py-8">
+          <AdminNav />
           <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-xl font-semibold tracking-tight">
@@ -141,18 +138,6 @@ const AdminReviewsPage: NextPage = () => {
               <p className="text-sm text-muted-foreground">
                 View and delete public reviews. Deletions are permanent.
               </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/admin/businesses")}
-              >
-                Businesses
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                Sign out
-              </Button>
             </div>
           </header>
 
