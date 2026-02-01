@@ -179,6 +179,26 @@ export default function FlaggedNumbersPage() {
                   </table>
                 </div>
               )}
+
+              {!loading && (
+                <div className="mt-4 rounded-md border border-dashed border-border/60 bg-background/60 p-3 text-[11px] text-muted-foreground">
+                  <p className="font-medium">Status Guide</p>
+                  <ul className="mt-1 space-y-0.5">
+                    <li>
+                      ⚠️ <span className="font-medium">Under Review</span> — Reports received and currently being assessed
+                    </li>
+                    <li>
+                      🚩 <span className="font-medium">Multiple Reports</span> — Reported by multiple independent sources
+                    </li>
+                    <li>
+                      ❗ <span className="font-medium">Pattern Match</span> — Matches known scam or fraud patterns
+                    </li>
+                    <li>
+                      ⛔ <span className="font-medium">Confirmed Scam</span> — High confidence of fraudulent activity
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
           </section>
         </div>
