@@ -184,6 +184,12 @@ const BusinessProfilePage: NextPage = () => {
     setSubmitting(false);
   };
 
+  const reviewsCount = reviews.length;
+  const avgRating =
+    reviewsCount > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewsCount
+      : 0;
+
   const title =
     business?.name ?? "Business profile – Transparent Turtle";
 
@@ -224,12 +230,19 @@ const BusinessProfilePage: NextPage = () => {
           ) : business ? (
             <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
               <section className="space-y-4">
-                <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                <div className="space-y-3 rounded-lg border border-border bg-card p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h2 className="text-lg font-semibold tracking-tight">
-                        {business.name}
-                      </h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-semibold tracking-tight">
+                          {business.name}
+                        </h2>
+                        {business.verified && (
+                          <Badge className="bg-emerald-600 text-emerald-50">
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         Phone: {business.phone}
                       </p>
@@ -240,27 +253,35 @@ const BusinessProfilePage: NextPage = () => {
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      {business.status === "SCAM" && (
-                        <Badge className="border bg-red-600 text-red-50 dark:bg-red-900 dark:text-red-100">
-                          ⛔ Confirmed Scam
-                        </Badge>
-                      )}
                       {business.status &&
-                        business.status !== "SCAM" && (
+                        business.status !== "VERIFIED" && (
                           <Badge
                             className={
-                              "border " +
-                              (statusBadgeClass[business.status] ||
-                                "bg-muted text-foreground")
+                              business.status === "SCAM"
+                                ? "border bg-red-600 text-red-50 dark:bg-red-900 dark:text-red-100"
+                                : "border " +
+                                  (statusBadgeClass[business.status] ||
+                                    "bg-muted text-foreground")
                             }
                           >
-                            {statusLabel[business.status] ?? "Status"}
+                            {business.status === "SCAM"
+                              ? "⛔ Confirmed Scam"
+                              : statusLabel[business.status] ??
+                                business.status}
                           </Badge>
                         )}
-                      {!business.status && business.verified && (
-                        <Badge className="bg-emerald-600 text-emerald-50">
-                          Verified
-                        </Badge>
+
+                      {(!business.status ||
+                        business.status === "VERIFIED") && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {reviewsCount > 0
+                            ? `⭐ ${avgRating.toFixed(
+                                1,
+                              )} • ${reviewsCount} review${
+                                reviewsCount === 1 ? "" : "s"
+                              }`
+                            : "No reviews yet"}
+                        </p>
                       )}
                     </div>
                   </div>

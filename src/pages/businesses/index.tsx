@@ -19,24 +19,24 @@ interface BusinessListItem {
   category: string;
   status: BusinessStatus | null;
   verified: boolean;
+  avg_rating: number;
+  reviews_count: number;
 }
 
-const statusLabel: Record<BusinessStatus, string> = {
+const statusLabel: Record<Exclude<BusinessStatus, "VERIFIED">, string> = {
   UNDER_REVIEW: "Under Review",
   MULTIPLE_REPORTS: "Multiple Independent Reports",
   PATTERN_MATCH_SCAM: "Pattern Match: Known Scam Method",
-  VERIFIED: "Verified",
   SCAM: "Confirmed Scam",
 };
 
-const statusBadgeClass: Record<BusinessStatus, string> = {
+const statusBadgeClass: Record<Exclude<BusinessStatus, "VERIFIED">, string> = {
   UNDER_REVIEW:
-    "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+    "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100 border-slate-300/70 dark:border-slate-600/70",
   MULTIPLE_REPORTS:
     "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40",
   PATTERN_MATCH_SCAM:
     "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40",
-  VERIFIED: "bg-emerald-600 text-emerald-50",
   SCAM:
     "bg-red-600 text-red-50 border border-red-700 dark:bg-red-900 dark:text-red-100",
 };
@@ -46,50 +46,90 @@ export default function BusinessesPage() {
   const [businesses, setBusinesses] = useState<BusinessListItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const fetchBusinesses = async (search?: string) => {
+    setLoading(true);
+
+    const baseQuery = supabase
+      .from("businesses_with_ratings")
+      .select(
+        "id,name,phone,category,status,verified,created_at,avg_rating,reviews_count",
+      )
+      .order("created_at", { ascending: false });
+
+    const queryBuilder =
+      search && search.trim().length > 0
+        ? baseQuery.or(
+            `name.ilike.%${search.trim()}%,phone.ilike.%${search.trim()}%`,
+          )
+        : baseQuery.limit(20);
+
+    const { data } = await queryBuilder;
+
+    if (data) {
+      setBusinesses(data as BusinessListItem[]);
+    } else {
+      setBusinesses([]);
+    }
+
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchInitial = async () => {
-      setLoading(true);
-      const { data } = await supabase
-        .from("businesses")
-        .select("id,name,phone,category,status,verified")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (data) {
-        setBusinesses(data as BusinessListItem[]);
-      }
-      setLoading(false);
-    };
-    fetchInitial();
+    void fetchBusinesses();
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    await fetchBusinesses(query);
+  };
 
-    const trimmed = query.trim();
-    if (!trimmed) {
-      const { data } = await supabase
-        .from("businesses")
-        .select("id,name,phone,category,status,verified")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (data) {
-        setBusinesses(data as BusinessListItem[]);
+  const renderStatusCell = (biz: BusinessListItem) => {
+    const status = biz.status;
+
+    const shouldShowRating =
+      status === null || status === "VERIFIED";
+
+    if (!shouldShowRating && status) {
+      if (status === "SCAM") {
+        return (
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadgeClass.SCAM}`}
+          >
+            ⛔ {statusLabel.SCAM}
+          </span>
+        );
       }
-      setLoading(false);
-      return;
+
+      if (
+        status === "UNDER_REVIEW" ||
+        status === "MULTIPLE_REPORTS" ||
+        status === "PATTERN_MATCH_SCAM"
+      ) {
+        return (
+          <span
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+              statusBadgeClass[status]
+            }`}
+          >
+            {statusLabel[status]}
+          </span>
+        );
+      }
     }
 
-    const { data } = await supabase
-      .from("businesses")
-      .select("id,name,phone,category,status,verified")
-      .or(`name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`)
-      .order("created_at", { ascending: false });
-
-    if (data) {
-      setBusinesses(data as BusinessListItem[]);
+    if (biz.reviews_count > 0) {
+      return (
+        <span className="text-[11px] text-muted-foreground">
+          ⭐ {biz.avg_rating.toFixed(1)} • {biz.reviews_count}
+        </span>
+      );
     }
-    setLoading(false);
+
+    return (
+      <span className="text-[11px] text-muted-foreground">
+        No reviews yet
+      </span>
+    );
   };
 
   return (
@@ -180,6 +220,11 @@ export default function BusinessesPage() {
                               >
                                 {biz.name}
                               </Link>
+                              {biz.verified && (
+                                <Badge className="bg-emerald-600 text-emerald-50">
+                                  Verified
+                                </Badge>
+                              )}
                             </div>
                             <div className="mt-0.5 text-[11px] text-muted-foreground">
                               {biz.phone}
@@ -189,25 +234,7 @@ export default function BusinessesPage() {
                             {biz.category}
                           </td>
                           <td className="py-2 px-3 align-middle">
-                            {biz.status ? (
-                              <span
-                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-                                  statusBadgeClass[biz.status]
-                                }`}
-                              >
-                                {biz.status === "SCAM"
-                                  ? "⛔ Confirmed Scam"
-                                  : statusLabel[biz.status] ?? biz.status}
-                              </span>
-                            ) : biz.verified ? (
-                              <span className="inline-flex items-center rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-emerald-50">
-                                Verified
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-muted-foreground">
-                                No status
-                              </span>
-                            )}
+                            {renderStatusCell(biz)}
                           </td>
                         </tr>
                       ))}
