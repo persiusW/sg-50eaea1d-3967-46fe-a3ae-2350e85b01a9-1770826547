@@ -43,32 +43,17 @@ const Home: NextPage = () => {
                           size="lg"
                           className="w-full sm:w-auto"
                         >
-                          <Link href="/businesses/add">Add a business</Link>
-                        </Button>
-                        <Button
-                          asChild
-                          variant="outline"
-                          size="lg"
-                          className="w-full sm:w-auto"
-                        >
                           <Link href="/report">Report a scam</Link>
                         </Button>
                         <Button
                           asChild
                           size="lg"
-                          className="w-full border-red-500 text-red-600 hover:bg-red-50 sm:w-auto dark:border-red-400 dark:text-red-300 dark:hover:bg-red-950/40"
+                          className="w-full sm:w-auto bg-red-500 text-white hover:bg-red-500/90 dark:bg-red-500 dark:hover:bg-red-400"
                         >
                           <Link href="/flagged-numbers">View flagged numbers</Link>
                         </Button>
                       </div>
                     </div>
-
-                    <Link
-                      href="/flagged-numbers"
-                      className="mt-2 inline-flex text-xs text-muted-foreground underline-offset-4 hover:underline"
-                    >
-                      View flagged numbers
-                    </Link>
                   </div>
 
                   <aside className="mt-4 w-full max-w-md rounded-lg border border-emerald-100 bg-card/70 p-4 shadow-sm backdrop-blur-sm dark:border-emerald-900/60 dark:bg-emerald-950/20 lg:mt-0 lg:ml-auto">
