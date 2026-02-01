@@ -39,6 +39,12 @@ export function PublicNav(): JSX.Element {
           >
             Flagged numbers
           </Link>
+          <Link
+            href="/report"
+            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+          >
+            Report
+          </Link>
         </nav>
         <button
           type="button"
@@ -78,6 +84,13 @@ export function PublicNav(): JSX.Element {
               className="whitespace-nowrap text-muted-foreground hover:text-foreground"
             >
               Flagged numbers
+            </Link>
+            <Link
+              href="/report"
+              onClick={closeMenu}
+              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+            >
+              Report
             </Link>
           </nav>
         </div>

@@ -23,7 +23,6 @@ export function AdminNav(): JSX.Element {
           </Link>
         </div>
 
-        {/* Desktop nav */}
         <nav className="hidden flex-1 justify-end gap-3 text-xs sm:flex sm:text-sm">
           <Link
             href="/admin"
@@ -49,6 +48,12 @@ export function AdminNav(): JSX.Element {
           >
             Flagged Numbers
           </Link>
+          <Link
+            href="/admin/reports"
+            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+          >
+            Reports
+          </Link>
           <button
             type="button"
             onClick={handleSignOut}
@@ -58,7 +63,6 @@ export function AdminNav(): JSX.Element {
           </button>
         </nav>
 
-        {/* Mobile menu button */}
         <button
           type="button"
           className="ml-auto inline-flex items-center rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground sm:hidden"
@@ -68,7 +72,6 @@ export function AdminNav(): JSX.Element {
         </button>
       </div>
 
-      {/* Mobile dropdown */}
       {open && (
         <div className="border-t border-border bg-background px-4 pb-3 pt-2 text-sm sm:hidden">
           <nav className="flex flex-col gap-2">
@@ -99,6 +102,13 @@ export function AdminNav(): JSX.Element {
               className="whitespace-nowrap text-muted-foreground hover:text-foreground"
             >
               Flagged Numbers
+            </Link>
+            <Link
+              href="/admin/reports"
+              onClick={closeMenu}
+              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+            >
+              Reports
             </Link>
             <button
               type="button"
