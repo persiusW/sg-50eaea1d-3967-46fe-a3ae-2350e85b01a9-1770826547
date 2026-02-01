@@ -1,17 +1,19 @@
 import React from "react";
+import type { NextPage } from "next";
 import Link from "next/link";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
+import { PublicLayout } from "@/components/PublicLayout";
 
-export default function Home() {
+const HomePage: NextPage = () => {
   return (
     <>
       <SEO
-        title="Transparent Turtle – Ghana’s Most Trusted Business Directory"
-        description="Discover trusted businesses across Ghana. Read authentic reviews, avoid scams, and check flagged phone numbers connected to fraud." />
-
-      <main className="min-h-screen bg-background text-foreground">
-        <div className="min-h-screen">
+        title="Transparent Turtle – Public business reviews and scam awareness"
+        description="Search businesses, read reviews, and see flagged phone numbers to stay ahead of scams."
+      />
+      <PublicLayout>
+        <section className="space-y-6">
           <section className="border-b border-border bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.10),_transparent_55%)]">
             <div className="container flex flex-col gap-10 py-16 md:flex-row md:items-start md:py-20">
               <div className="max-w-2xl space-y-6">
@@ -128,19 +130,10 @@ export default function Home() {
               </div>
             </div>
           </section>
+        </section>
+      </PublicLayout>
+    </>
+  );
+};
 
-          <footer className="mt-2 flex flex-col items-start justify-between gap-2 border-t border-border pt-4 text-xs text-muted-foreground sm:flex-row sm:items-center">
-            <p>
-              © {new Date().getFullYear()} Transparent Turtle. Built for
-              transparency and scam awareness.
-            </p>
-            <p>
-              Admin access only. Public users cannot edit or delete existing
-              records.
-            </p>
-          </footer>
-        </div>
-      </main>
-    </>);
-
-}
+export default HomePage;

@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
+import type { NextPage } from "next";
 import { SEO } from "@/components/SEO";
+import { Input } from "@/components/ui/input";
+import { PublicLayout } from "@/components/PublicLayout";
 import { supabase } from "@/integrations/supabase/client";
 import Link from "next/link";
 
@@ -43,7 +46,7 @@ const STATUS_PREFIX: Partial<Record<FlagStatus, string>> = {
   VERIFIED: "⛔ ",
 };
 
-export default function FlaggedNumbersPage() {
+const FlaggedNumbersPage: NextPage = () => {
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<PublicFlaggedNumber[]>([]);
   const [loading, setLoading] = useState(false);
@@ -144,10 +147,10 @@ export default function FlaggedNumbersPage() {
   return (
     <>
       <SEO
-        title="Flagged numbers – Transparent Turtle"
-        description="Search flagged phone numbers connected to scams and high-risk activity."
+        title="Flagged phone numbers – Transparent Turtle"
+        description="Browse and search flagged phone numbers and connected scam pages."
       />
-      <main className="min-h-screen bg-background text-foreground">
+      <PublicLayout>
         <div className="container flex min-h-screen flex-col gap-6 py-8">
           <header className="flex items-center justify-between gap-4">
             <div>
@@ -290,7 +293,9 @@ export default function FlaggedNumbersPage() {
             </div>
           </section>
         </div>
-      </main>
+      </PublicLayout>
     </>
   );
-}
+};
+
+export default FlaggedNumbersPage;

@@ -16,6 +16,36 @@ import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
 
+const TOP_CATEGORIES: string[] = [
+  "Restaurant",
+  "Fast Food Restaurant",
+  "Cafe",
+  "Bakery",
+  "Bar / Lounge",
+  "Hotel",
+  "Grocery Store",
+  "Supermarket",
+  "Pharmacy",
+  "Hospital / Clinic",
+  "Dentist",
+  "Beauty Salon",
+  "Hair Salon / Barber",
+  "Gym / Fitness Center",
+  "School / Training Center",
+  "Bank",
+  "ATM",
+  "Gas Station",
+  "Car Repair / Auto Service",
+  "Electronics Store",
+  "Clothing Store",
+  "Hardware Store",
+  "Shopping Mall / Retail Center",
+  "Real Estate Agency",
+  "Logistics / Delivery Service",
+];
+
+const OTHER_VALUE = "__OTHER__";
+
 type BusinessStatus =
   | "UNDER_REVIEW"
   | "MULTIPLE_REPORTS"
@@ -41,7 +71,8 @@ interface FormState {
   phone: string;
   location: string;
   branches_count: string;
-  category: string;
+  category: string; // holds either a predefined category or "__OTHER__"
+  customCategory: string;
   status: BusinessStatus | "__NONE__";
   verified: boolean;
 }
@@ -54,6 +85,8 @@ const statusLabel: Record<BusinessStatus, string> = {
   SCAM: "Confirmed Scam",
 };
 
+const PAGE_SIZE = 25;
+
 const AdminBusinessesPage: NextPage = () => {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -65,6 +98,7 @@ const AdminBusinessesPage: NextPage = () => {
     location: "",
     branches_count: "",
     category: "",
+    customCategory: "",
     status: "__NONE__",
     verified: true,
   });
@@ -72,8 +106,10 @@ const AdminBusinessesPage: NextPage = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
 
-  // Simple auth guard: redirect unauthenticated users to /admin/login
   useEffect(() => {
     const checkAuth = async () => {
       const session = await authService.getCurrentSession();
@@ -86,23 +122,67 @@ const AdminBusinessesPage: NextPage = () => {
     void checkAuth();
   }, [router]);
 
+  const fetchBusinessesPage = async (pageToLoad: number) => {
+    setLoading(true);
+
+    const from = (pageToLoad - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const { data, error } = await supabase
+      .from("businesses")
+      .select(
+        "id,name,phone,location,branches_count,category,status,verified,created_at",
+      )
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (!error && data) {
+      setBusinesses(data as Business[]);
+      setHasMore(data.length === PAGE_SIZE);
+    } else {
+      setBusinesses([]);
+      setHasMore(false);
+    }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("category");
+
+      const existing: string[] = !error && data
+        ? Array.from(
+            new Set(
+              (data as { category: string | null }[])
+                .map((row) => row.category?.trim())
+                .filter((c): c is string => !!c && c.length > 0),
+            ),
+          )
+        : [];
+
+      const all = [...TOP_CATEGORIES, ...existing];
+
+      const uniqueByLower = new Map<string, string>();
+      for (const cat of all) {
+        const key = cat.toLowerCase();
+        if (!uniqueByLower.has(key)) {
+          uniqueByLower.set(key, cat);
+        }
+      }
+
+      setCategoryOptions(Array.from(uniqueByLower.values()));
+    };
+
+    void loadCategories();
+  }, []);
+
   useEffect(() => {
     if (checkingAuth) return;
-    const fetchBusinesses = async () => {
-      setLoading(true);
-      const { data } = await supabase
-        .from("businesses")
-        .select(
-          "id,name,phone,location,branches_count,category,status,verified,created_at",
-        )
-        .order("created_at", { ascending: false });
-      if (data) {
-        setBusinesses(data as Business[]);
-      }
-      setLoading(false);
-    };
-    void fetchBusinesses();
-  }, [checkingAuth]);
+    void fetchBusinessesPage(page);
+  }, [checkingAuth, page]);
 
   const resetForm = () => {
     setForm({
@@ -111,6 +191,7 @@ const AdminBusinessesPage: NextPage = () => {
       location: "",
       branches_count: "",
       category: "",
+      customCategory: "",
       status: "__NONE__",
       verified: true,
     });
@@ -130,7 +211,15 @@ const AdminBusinessesPage: NextPage = () => {
       phone: biz.phone,
       location: biz.location ?? "",
       branches_count: biz.branches_count ? String(biz.branches_count) : "",
-      category: biz.category,
+      category: categoryOptions.find(
+        (opt) => opt.toLowerCase() === (biz.category || "").toLowerCase(),
+      ) || OTHER_VALUE,
+      customCategory:
+        categoryOptions.find(
+          (opt) => opt.toLowerCase() === (biz.category || "").toLowerCase(),
+        )
+          ? ""
+          : biz.category,
       status: biz.status ?? "__NONE__",
       verified: biz.verified,
     });
@@ -139,6 +228,19 @@ const AdminBusinessesPage: NextPage = () => {
 
   const handleFormChange = (field: keyof FormState, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value } as FormState));
+  };
+
+  const resolveCategory = (): string | null => {
+    if (form.category === OTHER_VALUE) {
+      const trimmed = form.customCategory.trim();
+      if (!trimmed) return null;
+      if (trimmed.length > 50) {
+        return trimmed.slice(0, 50);
+      }
+      return trimmed;
+    }
+    const trimmed = form.category.trim();
+    return trimmed || null;
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -150,12 +252,23 @@ const AdminBusinessesPage: NextPage = () => {
     const phone = form.phone.trim();
     const location = form.location.trim();
     const branchesStr = form.branches_count.trim();
-    const category = form.category.trim();
     const status = form.status;
     const verified = form.verified;
 
-    if (!name || !phone || !category) {
-      setFormError("Name, phone, and category are required.");
+    const categoryResolved = resolveCategory();
+
+    if (!name || !phone) {
+      setFormError("Name and phone are required.");
+      setSaving(false);
+      return;
+    }
+
+    if (!categoryResolved) {
+      setFormError(
+        form.category === OTHER_VALUE
+          ? "Please specify a category."
+          : "Category is required.",
+      );
       setSaving(false);
       return;
     }
@@ -169,7 +282,7 @@ const AdminBusinessesPage: NextPage = () => {
       branches_count: Number.isNaN(branchesCountNumber)
         ? null
         : branchesCountNumber,
-      category,
+      category: categoryResolved,
       status: status === "__NONE__" ? null : status,
       verified,
       created_by_admin: true,
@@ -196,17 +309,7 @@ const AdminBusinessesPage: NextPage = () => {
       return;
     }
 
-    // Refresh list
-    const { data } = await supabase
-      .from("businesses")
-      .select(
-        "id,name,phone,location,branches_count,category,status,verified,created_at",
-      )
-      .order("created_at", { ascending: false });
-    if (data) {
-      setBusinesses(data as Business[]);
-    }
-
+    await fetchBusinessesPage(page);
     resetForm();
     setSaving(false);
   };
@@ -219,16 +322,7 @@ const AdminBusinessesPage: NextPage = () => {
 
     setDeletingId(id);
     await supabase.from("businesses").delete().eq("id", id);
-
-    const { data } = await supabase
-      .from("businesses")
-      .select(
-        "id,name,phone,location,branches_count,category,status,verified,created_at",
-      )
-      .order("created_at", { ascending: false });
-    if (data) {
-      setBusinesses(data as Business[]);
-    }
+    await fetchBusinessesPage(page);
     setDeletingId(null);
   };
 
@@ -346,16 +440,52 @@ const AdminBusinessesPage: NextPage = () => {
                   </div>
                   <div className="space-y-1 sm:col-span-2">
                     <Label htmlFor="category">Category</Label>
-                    <Input
-                      id="category"
+                    <Select
                       value={form.category}
-                      onChange={(e) =>
-                        handleFormChange("category", e.target.value)
+                      onValueChange={(value: string) =>
+                        handleFormChange("category", value)
                       }
-                      placeholder="e.g. Logistics, Retail, Finance"
-                      required
-                    />
+                    >
+                      <SelectTrigger id="category">
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value={OTHER_VALUE}>
+                          Other
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {form.category === OTHER_VALUE && (
+                    <div className="space-y-1 sm:col-span-2">
+                      <Label htmlFor="customCategory">
+                        Specify category
+                      </Label>
+                      <Input
+                        id="customCategory"
+                        value={form.customCategory}
+                        onChange={(e) =>
+                          handleFormChange(
+                            "customCategory",
+                            e.target.value,
+                          )
+                        }
+                        maxLength={50}
+                        placeholder="e.g. Legal Services, Pet Store"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        If the category isn&apos;t listed, you can specify a
+                        short label (max 50 characters).
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-1 sm:col-span-2">
                     <Label htmlFor="status">Status</Label>
                     <Select
@@ -527,6 +657,36 @@ const AdminBusinessesPage: NextPage = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((prev) =>
+                      prev > 1 && !loading ? prev - 1 : prev
+                    )
+                  }
+                  disabled={page === 1 || loading}
+                  className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <p className="text-[11px] text-muted-foreground">
+                  Page {page}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((prev) =>
+                      hasMore && !loading ? prev + 1 : prev
+                    )
+                  }
+                  disabled={!hasMore || loading}
+                  className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+                >
+                  Next
+                </button>
               </div>
 
               <p className="text-[11px] text-muted-foreground">

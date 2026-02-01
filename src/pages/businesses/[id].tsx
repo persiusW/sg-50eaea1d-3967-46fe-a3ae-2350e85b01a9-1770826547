@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import type { NextPage } from "next";
-import { useRouter } from "next/router";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
-import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { PublicLayout } from "@/components/PublicLayout";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
 type BusinessStatus =
   | "UNDER_REVIEW"
@@ -65,7 +67,7 @@ const statusBadgeClass: Record<BusinessStatus, string> = {
     "bg-red-600 text-red-50 border border-red-700 dark:bg-red-900 dark:text-red-100",
 };
 
-const BusinessProfilePage: NextPage = () => {
+const BusinessDetailPage: NextPage = () => {
   const router = useRouter();
   const { id } = router.query;
 
@@ -232,7 +234,7 @@ const BusinessProfilePage: NextPage = () => {
         title={title}
         description="View business details, status, and community reviews on Transparent Turtle."
       />
-      <main className="min-h-screen bg-background text-foreground">
+      <PublicLayout>
         <div className="container flex min-h-screen flex-col gap-6 py-8">
           <header className="flex items-center justify-between gap-4">
             <div>
@@ -506,9 +508,9 @@ const BusinessProfilePage: NextPage = () => {
             </div>
           ) : null}
         </div>
-      </main>
+      </PublicLayout>
     </>
   );
 };
 
-export default BusinessProfilePage;
+export default BusinessDetailPage;

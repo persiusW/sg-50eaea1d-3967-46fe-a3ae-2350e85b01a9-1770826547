@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
+import type { NextPage } from "next";
 import Link from "next/link";
 import { SEO } from "@/components/SEO";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { PublicLayout } from "@/components/PublicLayout";
 
 type BusinessStatus =
   | "UNDER_REVIEW"
@@ -43,7 +45,7 @@ const statusBadgeClass: Record<Exclude<BusinessStatus, "VERIFIED">, string> = {
 
 const PAGE_SIZE = 25;
 
-export default function BusinessesPage() {
+const BusinessesPage: NextPage = () => {
   const [query, setQuery] = useState("");
   const [businesses, setBusinesses] = useState<BusinessListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -147,10 +149,10 @@ export default function BusinessesPage() {
     <>
       <SEO
         title="Search businesses – Transparent Turtle"
-        description="Search for businesses by name or phone on Transparent Turtle."
+        description="Search for businesses by name or phone and see their status and review summary."
       />
-      <main className="min-h-screen bg-background text-foreground">
-        <div className="container flex min-h-screen flex-col gap-6 py-8">
+      <PublicLayout>
+        <div className="flex min-h-screen flex-col gap-6 py-8">
           <header className="flex items-center justify-between gap-4">
             <div>
               <h1 className="text-xl font-semibold tracking-tight">
@@ -291,7 +293,9 @@ export default function BusinessesPage() {
             </div>
           </section>
         </div>
-      </main>
+      </PublicLayout>
     </>
   );
-}
+};
+
+export default BusinessesPage;
