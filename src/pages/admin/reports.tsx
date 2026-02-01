@@ -10,23 +10,23 @@ import { Button } from "@/components/ui/button";
 type ReportStatus = "NEW" | "REVIEWING" | "RESOLVED" | "REJECTED";
 type ReportType = "PHONE" | "BUSINESS";
 
-interface ScamReportRow {
+type ScamReportRow = {
   id: string;
-  report_type: ReportType;
-  phone: string | null;
-  name_on_number: string | null;
-  connected_page: string | null;
+  report_type: "PHONE" | "BUSINESS";
   platform: string | null;
+  connected_page: string | null;
   description: string;
-  submitter_name: string;
-  submitter_phone: string;
   evidence_url: string | null;
+  submitter_name: string | null;
+  submitter_phone: string | null;
+  phone: string | null;
   status: ReportStatus;
   business_id: string | null;
+  created_at: string;
   converted_review_id: string | null;
   converted_at: string | null;
-  created_at: string;
-}
+  name_on_number: string | null;
+};
 
 interface BusinessOption {
   id: string;
@@ -37,6 +37,17 @@ interface BusinessOption {
 const PAGE_SIZE = 25;
 
 const STATUS_OPTIONS: ReportStatus[] = ["NEW", "REVIEWING", "RESOLVED", "REJECTED"];
+
+interface ConvertState {
+  expandedId: string | null;
+  selectedBusinessId: string | null;
+  businessSearch: string;
+  businessOptions: { id: string; name: string; phone: string | null }[];
+  conversionSavingId: string | null;
+  conversionErrorById: Record<string, string | null>;
+  createBusinessNameById: Record<string, string>;
+  createBusinessPhoneById: Record<string, string>;
+}
 
 const AdminReportsPage: NextPage = () => {
   const router = useRouter();
@@ -56,6 +67,213 @@ const AdminReportsPage: NextPage = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+
+  const [state, setState] = useState<ConvertState>({
+    expandedId: null,
+    selectedBusinessId: null,
+    businessSearch: "",
+    businessOptions: [],
+    conversionSavingId: null,
+    conversionErrorById: {},
+    createBusinessNameById: {},
+    createBusinessPhoneById: {},
+  });
+
+  const { expandedId: expandedId2, selectedBusinessId: selectedBusinessId2, businessSearch: businessSearch2, businessOptions: businessOptions2, conversionSavingId: conversionSavingId2, conversionErrorById: conversionErrorById2, createBusinessNameById: createBusinessNameById2, createBusinessPhoneById: createBusinessPhoneById2 } = state;
+
+  const setExpandedId2 = (id: string | null) =>
+    setState((prev) => ({ ...prev, expandedId: id, selectedBusinessId: null }));
+
+  const setSelectedBusinessId2 = (id: string | null) =>
+    setState((prev) => ({ ...prev, selectedBusinessId: id }));
+
+  const setBusinessSearch2 = (value: string) =>
+    setState((prev) => ({ ...prev, businessSearch: value }));
+
+  const setBusinessOptions2 = (options: { id: string; name: string; phone: string | null }[]) =>
+    setState((prev) => ({ ...prev, businessOptions: options }));
+
+  const setConversionSavingId2 = (id: string | null) =>
+    setState((prev) => ({ ...prev, conversionSavingId: id }));
+
+  const setConversionErrorForId2 = (id: string, message: string | null) =>
+    setState((prev) => ({
+      ...prev,
+      conversionErrorById: { ...prev.conversionErrorById, [id]: message },
+    }));
+
+  const setCreateBusinessNameForId2 = (id: string, value: string) =>
+    setState((prev) => ({
+      ...prev,
+      createBusinessNameById: { ...prev.createBusinessNameById, [id]: value },
+    }));
+
+  const setCreateBusinessPhoneForId2 = (id: string, value: string) =>
+    setState((prev) => ({
+      ...prev,
+      createBusinessPhoneById: { ...prev.createBusinessPhoneById, [id]: value },
+    }));
+
+  const handleSearchBusinesses2 = async () => {
+    const term = businessSearch2.trim();
+    if (!term) {
+      setBusinessOptions2([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("id, name, phone")
+      .or(`name.ilike.%${term}%,phone.ilike.%${term}%`)
+      .order("name", { ascending: true })
+      .limit(20);
+
+    if (error) {
+      console.error(error);
+      setBusinessOptions2([]);
+      return;
+    }
+
+    setBusinessOptions2(data ?? []);
+  };
+
+  const formatConvertedBody2 = (report: ScamReportRow): string => {
+    const lines: string[] = [];
+
+    lines.push("Converted from report submission", "");
+    lines.push(`Report type: ${report.report_type}`);
+
+    if (report.platform) {
+      lines.push(`Platform: ${report.platform}`);
+    }
+    if (report.connected_page) {
+      lines.push(`Connected page: ${report.connected_page}`);
+    }
+
+    lines.push("");
+    lines.push("Details:");
+    lines.push(report.description || "");
+
+    if (report.evidence_url) {
+      lines.push("");
+      lines.push(`Evidence: ${report.evidence_url}`);
+    }
+
+    return lines.join("\n");
+  };
+
+  const createBusinessAndConvert2 = async (report: ScamReportRow) => {
+    setConversionErrorForId2(report.id, null);
+
+    const existingName = (createBusinessNameById2[report.id] || "").trim();
+    const defaultName =
+      report.connected_page?.trim() ||
+      report.name_on_number?.trim() ||
+      "Unknown business";
+    const nameToUse = (existingName || defaultName).trim();
+
+    const existingPhoneState = (createBusinessPhoneById2[report.id] || "").trim();
+    const phoneFromReport = report.submitter_phone?.trim() || report.connected_page?.trim() || null;
+    const phoneToUse = (report.submitter_phone?.trim() || existingPhoneState).trim();
+
+    if (!nameToUse || !phoneToUse) {
+      setConversionErrorForId2(
+        report.id,
+        "Business name and phone are required to create a business from this report.",
+      );
+      return;
+    }
+
+    setConversionSavingId2(report.id);
+
+    let businessId: string | null = null;
+
+    const { data: existingBiz, error: bizError } = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("phone", phoneToUse)
+      .maybeSingle();
+
+    if (bizError) {
+      console.error(bizError);
+      setConversionErrorForId2(report.id, "Could not look up business by phone.");
+      setConversionSavingId2(null);
+      return;
+    }
+
+    if (existingBiz) {
+      businessId = existingBiz.id;
+    } else {
+      const businessPayload = {
+        name: nameToUse,
+        phone: phoneToUse,
+        category: "Other",
+        location: null,
+        branches_count: 1,
+        verified: false,
+        created_by_admin: true,
+        status: "UNDER_REVIEW",
+      };
+
+      const { data: newBiz, error: insertBizError } = await supabase
+        .from("businesses")
+        .insert([businessPayload])
+        .select("id")
+        .single();
+
+      if (insertBizError || !newBiz) {
+        console.error(insertBizError);
+        setConversionErrorForId2(report.id, "Could not create business from report.");
+        setConversionSavingId2(null);
+        return;
+      }
+
+      businessId = newBiz.id as string;
+    }
+
+    const body = formatConvertedBody2(report);
+
+    const { data: reviewData, error: insertError } = await supabase
+      .from("reviews")
+      .insert({
+        business_id: businessId,
+        reviewer_name: report.submitter_name,
+        reviewer_phone: report.submitter_phone,
+        rating: 1,
+        body,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !reviewData) {
+      console.error(insertError);
+      setConversionErrorForId2(report.id, "Could not convert to review.");
+      setConversionSavingId2(null);
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+
+    const { error: updateError } = await supabase
+      .from("scam_reports")
+      .update({
+        business_id: businessId,
+        converted_review_id: reviewData.id as string,
+        converted_at: nowIso,
+        status: "RESOLVED",
+      })
+      .eq("id", report.id);
+
+    if (updateError) {
+      console.error(updateError);
+      setConversionErrorForId2(report.id, "Could not mark report as resolved.");
+      setConversionSavingId2(null);
+      return;
+    }
+
+    await fetchReports(page);
+    setConversionSavingId2(null);
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -179,21 +397,31 @@ const AdminReportsPage: NextPage = () => {
   };
 
   const convertToReview = async (report: ScamReportRow) => {
-    if (!selectedBusinessId) {
-      setError("Select a business before converting to a review.");
-      return;
-    }
+    if (!selectedBusinessId && !report.id) return;
     setConversionSavingId(report.id);
     setError(null);
 
-    const bodyLines = [
-      "Converted from report submission",
-      `Report type: ${report.report_type}`,
-      report.platform ? `Platform: ${report.platform}` : null,
-      report.connected_page ? `Connected page: ${report.connected_page}` : null,
-      `Details: ${report.description}`,
-      report.evidence_url ? `Evidence: ${report.evidence_url}` : null,
-    ].filter((line): line is string => !!line);
+    const bodyLines: string[] = [];
+
+    bodyLines.push("Converted from report submission", "");
+
+    bodyLines.push(`Report type: ${report.report_type}`);
+
+    if (report.platform) {
+      bodyLines.push(`Platform: ${report.platform}`);
+    }
+    if (report.connected_page) {
+      bodyLines.push(`Connected page: ${report.connected_page}`);
+    }
+
+    bodyLines.push("");
+    bodyLines.push("Details:");
+    bodyLines.push(report.description || "");
+
+    if (report.evidence_url) {
+      bodyLines.push("");
+      bodyLines.push(`Evidence: ${report.evidence_url}`);
+    }
 
     const body = bodyLines.join("\n");
 
@@ -235,9 +463,10 @@ const AdminReportsPage: NextPage = () => {
     setBulkError(null);
     setBulkSaving(true);
 
-    const prevById = new Map<string, ReportStatus>(
-      reports.map((r) => [r.id, r.status])
-    );
+    const prevById = new Map<string, ReportStatus>();
+    for (const r of reports) {
+      prevById.set(r.id, r.status as ReportStatus);
+    }
 
     setReports((prev) =>
       prev.map((r) =>
@@ -404,202 +633,259 @@ const AdminReportsPage: NextPage = () => {
                       </td>
                     </tr>
                   ) : (
-                    reports.map((report) => (
-                      <React.Fragment key={report.id}>
-                        <tr className="border-b border-border/60 align-top">
-                          <td className="px-2 py-2 align-top">
-                            <input
-                              type="checkbox"
-                              className="h-3 w-3 accent-emerald-600"
-                              checked={selectedIds.includes(report.id)}
-                              onChange={(e) => {
-                                setSelectedIds((prev) =>
-                                  e.target.checked
-                                    ? [...prev, report.id]
-                                    : prev.filter((id) => id !== report.id),
-                                );
-                              }}
-                            />
-                          </td>
-                          <td className="px-2 py-2 text-[11px]">
-                            {report.report_type}
-                          </td>
-                          <td className="px-2 py-2 text-[11px]">
-                            {report.phone || "—"}
-                          </td>
-                          <td className="px-2 py-2 text-[11px]">
-                            {report.platform || "—"}
-                          </td>
-                          <td className="px-2 py-2 text-[11px]">
-                            {report.connected_page || "—"}
-                          </td>
-                          <td className="px-2 py-2 text-[11px]">
-                            <select
-                              className="w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
-                              value={report.status}
-                              onChange={(e) =>
-                                handleStatusChange(
-                                  report.id,
-                                  e.target.value as ReportStatus
-                                )
-                              }
-                              disabled={statusSavingId === report.id}
-                            >
-                              {STATUS_OPTIONS.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-2 py-2 text-[11px] text-muted-foreground">
-                            {new Date(report.created_at).toLocaleString()}
-                          </td>
-                          <td className="px-2 py-2 text-[11px]">
-                            <div className="flex flex-wrap gap-1">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setExpandedId(
-                                    expandedId === report.id ? null : report.id
+                    reports.map((report) => {
+                      const isExpanded = expandedId === report.id;
+                      const conversionError = conversionErrorById[report.id] ?? null;
+
+                      const defaultName =
+                        report.connected_page?.trim() ||
+                        report.name_on_number?.trim() ||
+                        "Unknown business";
+
+                      const createNameValue =
+                        createBusinessNameById[report.id] ?? defaultName;
+
+                      const createPhoneValue =
+                        createBusinessPhoneById[report.id] ?? "";
+
+                      const phoneToUse =
+                        report.phone?.trim() || createPhoneValue.trim();
+
+                      const canCreate =
+                        !selectedBusinessId &&
+                        createNameValue.trim().length > 0 &&
+                        !!phoneToUse &&
+                        conversionSavingId !== report.id;
+
+                      return (
+                        <React.Fragment key={report.id}>
+                          <tr className="border-b border-border/60 align-top">
+                            <td className="px-2 py-2 align-top">
+                              <input
+                                type="checkbox"
+                                className="h-3 w-3 accent-emerald-600"
+                                checked={selectedIds.includes(report.id)}
+                                onChange={(e) => {
+                                  setSelectedIds((prev) =>
+                                    e.target.checked
+                                      ? [...prev, report.id]
+                                      : prev.filter((id) => id !== report.id),
+                                  );
+                                }}
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-[11px]">
+                              {report.report_type}
+                            </td>
+                            <td className="px-2 py-2 text-[11px]">
+                              {report.phone || "—"}
+                            </td>
+                            <td className="px-2 py-2 text-[11px]">
+                              {report.platform || "—"}
+                            </td>
+                            <td className="px-2 py-2 text-[11px]">
+                              {report.connected_page || "—"}
+                            </td>
+                            <td className="px-2 py-2 text-[11px]">
+                              <select
+                                className="w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                                value={report.status}
+                                onChange={(e) =>
+                                  handleStatusChange(
+                                    report.id,
+                                    e.target.value as ReportStatus
                                   )
                                 }
-                                className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                                disabled={statusSavingId === report.id}
                               >
-                                {expandedId === report.id ? "Hide" : "View"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void convertToFlagged(report)}
-                                disabled={!report.phone || conversionSavingId === report.id}
-                                className="rounded-md border border-border bg-background px-2 py-1 text-[11px] disabled:opacity-60"
-                              >
-                                Flag number
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(report.id)}
-                                disabled={deleteId === report.id}
-                                className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] text-destructive disabled:opacity-60"
-                              >
-                                {deleteId === report.id ? "Deleting…" : "Delete"}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                        {expandedId === report.id && (
-                          <tr className="border-b border-border/60 bg-background/60">
-                            <td colSpan={8} className="px-3 py-3 text-[11px]">
-                              <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-                                <div className="space-y-2">
-                                  <p className="font-medium text-foreground">
-                                    Details
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">
-                                      Name on number:
-                                    </span>{" "}
-                                    {report.name_on_number || "—"}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">
-                                      Submitter name:
-                                    </span>{" "}
-                                    {report.submitter_name}
-                                  </p>
-                                  <p>
-                                    <span className="font-medium">
-                                      Evidence:
-                                    </span>{" "}
-                                    {report.evidence_url ? (
-                                      <a
-                                        href={report.evidence_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-primary underline"
-                                      >
-                                        Open link
-                                      </a>
-                                    ) : (
-                                      "—"
-                                    )}
-                                  </p>
-                                  <p className="whitespace-pre-wrap">
-                                    <span className="font-medium">
-                                      Description:
-                                    </span>{" "}
-                                    {report.description}
-                                  </p>
-                                </div>
-                                <div className="space-y-2">
-                                  <p className="font-medium text-foreground">
-                                    Convert to review
-                                  </p>
-                                  <p className="text-[11px] text-muted-foreground">
-                                    Link this report to a business as a 1-star
-                                    review for internal tracking. This does not
-                                    display the submitter&apos;s phone number
-                                    publicly.
-                                  </p>
-                                  <div className="flex flex-col gap-2">
-                                    <div className="flex gap-2">
-                                      <input
-                                        type="text"
-                                        className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-[11px]"
-                                        placeholder="Search business by name or phone"
-                                        value={businessSearch}
-                                        onChange={(e) =>
-                                          setBusinessSearch(e.target.value)
-                                        }
-                                      />
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => void searchBusinesses()}
-                                      >
-                                        Search
-                                      </Button>
-                                    </div>
-                                    {businessOptions.length > 0 && (
-                                      <select
-                                        className="w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
-                                        value={selectedBusinessId}
-                                        onChange={(e) =>
-                                          setSelectedBusinessId(e.target.value)
-                                        }
-                                      >
-                                        <option value="">
-                                          Select a business
-                                        </option>
-                                        {businessOptions.map((biz) => (
-                                          <option key={biz.id} value={biz.id}>
-                                            {biz.name} ({biz.phone})
-                                          </option>
-                                        ))}
-                                      </select>
-                                    )}
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      onClick={() => void convertToReview(report)}
-                                      disabled={
-                                        conversionSavingId === report.id ||
-                                        !selectedBusinessId
-                                      }
-                                    >
-                                      {conversionSavingId === report.id
-                                        ? "Converting…"
-                                        : "Convert to review"}
-                                    </Button>
-                                  </div>
-                                </div>
+                                {STATUS_OPTIONS.map((s) => (
+                                  <option key={s} value={s}>
+                                    {s}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-2 py-2 text-[11px] text-muted-foreground">
+                              {new Date(report.created_at).toLocaleString()}
+                            </td>
+                            <td className="px-2 py-2 text-[11px]">
+                              <div className="flex flex-wrap gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedId(isExpanded ? null : report.id)}
+                                  className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                                >
+                                  {isExpanded ? "Hide" : "View"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void convertToFlagged(report)}
+                                  disabled={!report.phone || conversionSavingId === report.id}
+                                  className="rounded-md border border-border bg-background px-2 py-1 text-[11px] disabled:opacity-60"
+                                >
+                                  Flag number
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(report.id)}
+                                  disabled={deleteId === report.id}
+                                  className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] text-destructive disabled:opacity-60"
+                                >
+                                  {deleteId === report.id ? "Deleting…" : "Delete"}
+                                </button>
                               </div>
                             </td>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    ))
+                          {isExpanded && (
+                            <tr className="border-b border-border/60 bg-muted/30 text-sm">
+                              <td colSpan={8} className="px-3 pb-3 pt-2">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2 text-xs">
+                                    <h3 className="font-semibold">Report details</h3>
+                                    <p>
+                                      <span className="font-medium">
+                                        Name on number:
+                                      </span>{" "}
+                                      {report.name_on_number || "—"}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">
+                                        Submitter name:
+                                      </span>{" "}
+                                      {report.submitter_name}
+                                    </p>
+                                    <p>
+                                      <span className="font-medium">
+                                        Evidence:
+                                      </span>{" "}
+                                      {report.evidence_url ? (
+                                        <a
+                                          href={report.evidence_url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-primary underline"
+                                        >
+                                          Open link
+                                        </a>
+                                      ) : (
+                                        "—"
+                                      )}
+                                    </p>
+                                    <p className="whitespace-pre-wrap">
+                                      <span className="font-medium">
+                                        Description:
+                                      </span>{" "}
+                                      {report.description}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-3 text-xs">
+                                    <h3 className="font-semibold">Convert to review</h3>
+
+                                    <div className="space-y-2">
+                                      <label className="block text-[11px] font-medium">
+                                        Link to existing business
+                                      </label>
+                                      <div className="flex gap-2">
+                                        <input
+                                          type="text"
+                                          className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                                          placeholder="Search by name or phone"
+                                          value={businessSearch}
+                                          onChange={(e) => setBusinessSearch(e.target.value)}
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={handleSearchBusinesses}
+                                          className="rounded-md bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground"
+                                        >
+                                          Search
+                                        </button>
+                                      </div>
+                                      {businessOptions.length > 0 && (
+                                        <select
+                                          className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                                          value={selectedBusinessId ?? ""}
+                                          onChange={(e) =>
+                                            setSelectedBusinessId(
+                                              e.target.value || null,
+                                            )
+                                          }
+                                        >
+                                          <option value="">Select business</option>
+                                          {businessOptions.map((biz) => (
+                                            <option key={biz.id} value={biz.id}>
+                                              {biz.name}
+                                              {biz.phone ? ` (${biz.phone})` : ""}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      )}
+                                    </div>
+
+                                    <div className="mt-3 space-y-2 rounded-md border border-dashed border-border bg-card/40 p-3">
+                                      <h4 className="text-[11px] font-semibold">
+                                        Create new business (if not found)
+                                      </h4>
+                                      <div className="space-y-1">
+                                        <label className="block text-[11px] font-medium">
+                                          Business name
+                                        </label>
+                                        <input
+                                          type="text"
+                                          className="block w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                                          value={createNameValue}
+                                          onChange={(e) =>
+                                            setCreateBusinessNameForId(
+                                              report.id,
+                                              e.target.value,
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="block text-[11px] font-medium">
+                                          {report.phone
+                                            ? "Business phone"
+                                            : "Business phone (required)"}
+                                        </label>
+                                        <input
+                                          type="text"
+                                          className="block w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                                          value={report.phone ?? createPhoneValue}
+                                          onChange={(e) =>
+                                            !report.phone &&
+                                            setCreateBusinessPhoneForId(
+                                              report.id,
+                                              e.target.value,
+                                            )
+                                          }
+                                          readOnly={Boolean(report.phone)}
+                                        />
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="mt-1 inline-flex h-8 items-center justify-center rounded-md bg-primary px-3 text-[11px] font-medium text-primary-foreground disabled:opacity-60"
+                                        disabled={!canCreate}
+                                        onClick={() => void createBusinessAndConvert(report)}
+                                      >
+                                        {conversionSavingId === report.id
+                                          ? "Creating…"
+                                          : "Create business and convert"}
+                                      </button>
+                                      {conversionError && (
+                                        <p className="mt-1 text-[11px] text-destructive">
+                                          {conversionError}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
