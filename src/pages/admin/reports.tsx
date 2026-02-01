@@ -88,7 +88,6 @@ const AdminReportsPage: NextPage = () => {
     setConvertState((prev) => ({
       ...prev,
       expandedId: id,
-      // reset selection when toggling rows to avoid cross-row leaks
       selectedBusinessId: null,
       businessSearch: "",
       businessOptions: [],
@@ -223,33 +222,74 @@ const AdminReportsPage: NextPage = () => {
     setBusinessOptions((data || []) as BusinessOption[]);
   };
 
+  const convertUsingSelectedBusiness = async (
+    report: ScamReportRow,
+    businessId: string,
+  ) => {
+    if (!businessId) return;
+
+    setConversionErrorForId(report.id, null);
+    setConversionSavingId(report.id);
+
+    const prefix = "Converted from report submission — ";
+    const description = (report.description || "").trim();
+    const body =
+      description.length > 0 ? `${prefix}${description}` : prefix;
+
+    const { data: reviewData, error: insertError } = await supabase
+      .from("reviews")
+      .insert({
+        business_id: businessId,
+        reviewer_name: report.submitter_name,
+        reviewer_phone: report.submitter_phone,
+        rating: 1,
+        body,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !reviewData) {
+      setConversionErrorForId(
+        report.id,
+        "Could not convert to review (existing business).",
+      );
+      setConversionSavingId(null);
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+
+    const { error: updateError } = await supabase
+      .from("scam_reports")
+      .update({
+        status: "RESOLVED",
+        business_id: businessId,
+        converted_review_id: reviewData.id as string,
+        converted_at: nowIso,
+      })
+      .eq("id", report.id);
+
+    if (updateError) {
+      setConversionErrorForId(
+        report.id,
+        "Could not mark report as resolved.",
+      );
+      setConversionSavingId(null);
+      return;
+    }
+
+    setConversionErrorForId(report.id, null);
+    await fetchReports(page);
+    setConversionSavingId(null);
+  };
+
   const formatConvertedBody = (report: ScamReportRow): string => {
-    const lines: string[] = [];
-
-    lines.push("Converted from report submission", "");
-    lines.push(`Report type: ${report.report_type}`);
-
-    if (report.platform) {
-      lines.push(`Platform: ${report.platform}`);
-    }
-    if (report.connected_page) {
-      lines.push(`Connected page: ${report.connected_page}`);
-    }
-
-    lines.push("");
-    lines.push("Details:");
-    lines.push(report.description || "");
-
-    if (report.evidence_url) {
-      lines.push("");
-      lines.push(`Evidence: ${report.evidence_url}`);
-    }
-
-    return lines.join("\n");
+    const prefix = "Converted from report submission — ";
+    const description = (report.description || "").trim();
+    return description.length > 0 ? `${prefix}${description}` : prefix;
   };
 
   const createBusinessAndConvert = async (report: ScamReportRow) => {
-    // if an existing business is selected, do not allow create path
     if (selectedBusinessId) {
       return;
     }
@@ -285,7 +325,6 @@ const AdminReportsPage: NextPage = () => {
       .maybeSingle();
 
     if (bizError) {
-      console.error(bizError);
       setConversionErrorForId(
         report.id,
         "Could not look up business by phone.",
@@ -295,7 +334,7 @@ const AdminReportsPage: NextPage = () => {
     }
 
     if (existingBiz) {
-      businessId = existingBiz.id;
+      businessId = existingBiz.id as string;
     } else {
       const businessPayload = {
         name: nameToUse,
@@ -315,7 +354,6 @@ const AdminReportsPage: NextPage = () => {
         .single();
 
       if (insertBizError || !newBiz) {
-        console.error(insertBizError);
         setConversionErrorForId(
           report.id,
           "Could not create business from report.",
@@ -342,7 +380,6 @@ const AdminReportsPage: NextPage = () => {
       .single();
 
     if (insertError || !reviewData) {
-      console.error(insertError);
       setConversionErrorForId(report.id, "Could not convert to review.");
       setConversionSavingId(null);
       return;
@@ -361,7 +398,6 @@ const AdminReportsPage: NextPage = () => {
       .eq("id", report.id);
 
     if (updateError) {
-      console.error(updateError);
       setConversionErrorForId(
         report.id,
         "Could not mark report as resolved.",
@@ -797,6 +833,23 @@ const AdminReportsPage: NextPage = () => {
                                           ? "Creating…"
                                           : "Create business and convert"}
                                       </button>
+                                      {selectedBusinessId && (
+                                        <button
+                                          type="button"
+                                          className="mt-2 inline-flex h-8 items-center justify-center rounded-md bg-primary px-3 text-[11px] font-medium text-primary-foreground disabled:opacity-60"
+                                          disabled={conversionSavingId === report.id}
+                                          onClick={() =>
+                                            void convertUsingSelectedBusiness(
+                                              report,
+                                              selectedBusinessId,
+                                            )
+                                          }
+                                        >
+                                          {conversionSavingId === report.id
+                                            ? "Converting…"
+                                            : "Convert to review (use selected business)"}
+                                        </button>
+                                      )}
                                       {conversionError && (
                                         <p className="mt-1 text-[11px] text-destructive">
                                           {conversionError}

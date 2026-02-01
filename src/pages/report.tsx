@@ -165,9 +165,9 @@ const ReportPage: NextPage = () => {
       <PublicLayout>
         <div className="container flex min-h-screen flex-col gap-6 py-8" style={{ padding: "auto" }}>
           <header className="space-y-2">
-            <p className="text-xs font-semibold text-red-600">
-              REPORT FORM v2 — category + location
-            </p>
+            
+
+
             <h1 className="text-xl font-semibold tracking-tight">
               Report a suspicious business or phone number
             </h1>
