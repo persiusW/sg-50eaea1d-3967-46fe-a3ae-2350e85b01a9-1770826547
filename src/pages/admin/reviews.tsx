@@ -205,9 +205,6 @@ const AdminReviewsPage: NextPage = () => {
               <h1 className="text-xl font-semibold tracking-tight">
                 Reviews (admin)
               </h1>
-              <p className="mt-0.5 text-xs font-semibold text-emerald-600">
-                UI v2: reviewer name + filters
-              </p>
               <p className="text-sm text-muted-foreground">
                 View and delete public reviews. Deletions are permanent.
               </p>
