@@ -28,6 +28,8 @@ interface FormState {
   status: FlagStatus;
 }
 
+const PAGE_SIZE = 25;
+
 const STATUS_OPTIONS: FlagStatus[] = [
   "UNDER_REVIEW",
   "MULTIPLE_REPORTS",
@@ -72,17 +74,29 @@ export default function AdminFlaggedNumbersPage() {
     status: "UNDER_REVIEW",
   });
 
-  const load = async () => {
+  const [page, setPage] = useState(1);
+  const [isLastPage, setIsLastPage] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
+
+  const load = async (pageNumber: number) => {
     setLoading(true);
+    setLoadingPage(true);
+
+    const from = (pageNumber - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
     const { data, error } = await supabase
       .from("flagged_numbers")
       .select(
         "id, phone, name_on_number, connected_page, admin_note, status, verified",
       )
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
     if (error) {
       setError(error.message);
+      setItems([]);
+      setIsLastPage(true);
     } else if (data) {
       setItems(
         data.map((row) => ({
@@ -91,12 +105,18 @@ export default function AdminFlaggedNumbersPage() {
           verified: true,
         })),
       );
+      setIsLastPage(data.length < PAGE_SIZE);
+    } else {
+      setItems([]);
+      setIsLastPage(true);
     }
+
     setLoading(false);
+    setLoadingPage(false);
   };
 
   useEffect(() => {
-    load();
+    load(1);
   }, []);
 
   const resetForm = () => {
@@ -131,7 +151,8 @@ export default function AdminFlaggedNumbersPage() {
     if (error) {
       setError(error.message);
     } else {
-      await load();
+      // reload current page to keep context
+      await load(page);
       if (form.id === id) {
         resetForm();
       }
@@ -167,7 +188,7 @@ export default function AdminFlaggedNumbersPage() {
       if (error) {
         setError(error.message);
       } else {
-        await load();
+        await load(page);
         resetForm();
       }
     } else {
@@ -177,12 +198,28 @@ export default function AdminFlaggedNumbersPage() {
       if (error) {
         setError(error.message);
       } else {
-        await load();
+        // after insert, go back to first page to ensure new is visible at top
+        setPage(1);
+        await load(1);
         resetForm();
       }
     }
 
     setSaving(false);
+  };
+
+  const handlePrevious = () => {
+    if (page === 1 || loadingPage) return;
+    const nextPage = page - 1;
+    setPage(nextPage);
+    load(nextPage);
+  };
+
+  const handleNext = () => {
+    if (isLastPage || loadingPage) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    load(nextPage);
   };
 
   return (
@@ -415,6 +452,26 @@ export default function AdminFlaggedNumbersPage() {
                   </table>
                 </div>
               )}
+
+              <div className="mt-4 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={handlePrevious}
+                  disabled={page === 1 || loadingPage}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <span>Page {page}</span>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={isLastPage || loadingPage}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </section>
         </div>

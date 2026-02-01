@@ -17,6 +17,8 @@ interface PublicFlaggedNumber {
   status: FlagStatus;
 }
 
+const PAGE_SIZE = 25;
+
 const STATUS_LABEL: Record<FlagStatus, string> = {
   UNDER_REVIEW: "Under Review",
   MULTIPLE_REPORTS: "Multiple Reports",
@@ -46,36 +48,98 @@ export default function FlaggedNumbersPage() {
   const [items, setItems] = useState<PublicFlaggedNumber[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const load = async () => {
+  const [page, setPage] = useState(1);
+  const [isLastPage, setIsLastPage] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(false);
+
+  const fetchPage = async (pageNumber: number, currentQuery: string) => {
     setLoading(true);
-    const { data } = await supabase
+    setLoadingPage(true);
+
+    const from = (pageNumber - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const queryBuilder = supabase
       .from("flagged_numbers")
       .select("id, phone, name_on_number, connected_page, status")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
-    if (data) {
-      setItems(
-        data.map((row) => ({
+    const trimmed = currentQuery.trim();
+    if (trimmed) {
+      const lowered = trimmed.toLowerCase();
+      // client-side filter after page fetch to keep logic simple
+      const { data } = await queryBuilder;
+      if (data) {
+        const mapped = data.map((row) => ({
           ...row,
           status: (row.status || "UNDER_REVIEW") as FlagStatus,
-        })),
-      );
+        })) as PublicFlaggedNumber[];
+
+        const filtered = mapped.filter((item) => {
+          const phone = item.phone.toLowerCase();
+          const name = (item.name_on_number ?? "").toLowerCase();
+          return (
+            phone.includes(lowered) ||
+            name.includes(lowered)
+          );
+        });
+
+        setItems(filtered);
+        setIsLastPage(filtered.length < PAGE_SIZE || data.length < PAGE_SIZE);
+      } else {
+        setItems([]);
+        setIsLastPage(true);
+      }
+    } else {
+      const { data } = await queryBuilder;
+      if (data) {
+        const mapped = data.map((row) => ({
+          ...row,
+          status: (row.status || "UNDER_REVIEW") as FlagStatus,
+        })) as PublicFlaggedNumber[];
+
+        setItems(mapped);
+        setIsLastPage(data.length < PAGE_SIZE);
+      } else {
+        setItems([]);
+        setIsLastPage(true);
+      }
     }
+
     setLoading(false);
+    setLoadingPage(false);
   };
 
   useEffect(() => {
-    load();
+    fetchPage(1, "");
   }, []);
 
-  const filtered = items.filter((item) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      item.phone.toLowerCase().includes(q) ||
-      (item.name_on_number ?? "").toLowerCase().includes(q)
-    );
-  });
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+    const trimmed = value.trim();
+    // Reset to page 1 on new search and fetch
+    const nextPage = 1;
+    setPage(nextPage);
+    fetchPage(nextPage, trimmed);
+  };
+
+  const handlePrevious = () => {
+    if (page === 1 || loadingPage) return;
+    const nextPage = page - 1;
+    setPage(nextPage);
+    fetchPage(nextPage, query.trim());
+  };
+
+  const handleNext = () => {
+    if (isLastPage || loadingPage) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchPage(nextPage, query.trim());
+  };
+
+  const filtered = items;
 
   return (
     <>
@@ -110,7 +174,7 @@ export default function FlaggedNumbersPage() {
                 placeholder="Search by phone number or name on number"
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 sm:max-w-md"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={handleSearchChange}
               />
             </div>
 
@@ -134,7 +198,9 @@ export default function FlaggedNumbersPage() {
                       <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                         <th className="py-2 pr-3 font-medium">Phone</th>
                         <th className="py-2 px-3 font-medium">Name</th>
-                        <th className="py-2 px-3 font-medium">Connected scam/page</th>
+                        <th className="py-2 px-3 font-medium">
+                          Connected scam/page
+                        </th>
                         <th className="py-2 px-3 font-medium">Status</th>
                       </tr>
                     </thead>
@@ -180,6 +246,28 @@ export default function FlaggedNumbersPage() {
                 </div>
               )}
 
+              {/* Pagination controls */}
+              <div className="mt-4 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={handlePrevious}
+                  disabled={page === 1 || loadingPage}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <span>Page {page}</span>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={isLastPage || loadingPage}
+                  className="inline-flex h-8 items-center justify-center rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+
+              {/* Existing legend (unchanged content) */}
               {!loading && (
                 <div className="mt-4 rounded-md border border-dashed border-border/60 bg-background/60 p-3 text-[11px] text-muted-foreground">
                   <p className="font-medium">Status Guide</p>
