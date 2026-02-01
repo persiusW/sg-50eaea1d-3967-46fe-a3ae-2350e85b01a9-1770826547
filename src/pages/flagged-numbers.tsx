@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import type { NextPage } from "next";
 import { SEO } from "@/components/SEO";
 import { PublicLayout } from "@/components/PublicLayout";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { StatusLegend } from "@/components/StatusLegend";
 import Link from "next/link";
 
 type FlagStatus =
@@ -146,23 +149,16 @@ const FlaggedNumbersPage: NextPage = () => {
       />
       <PublicLayout>
         <div className="container flex min-h-screen flex-col gap-6 py-8">
-          <header className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">
-                Flagged numbers
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                A public list of phone numbers connected to scams or high-risk
-                activity. Each entry has a status badge set by admins.
-              </p>
-            </div>
-            <Link
-              href="/"
-              className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
-            >
-              Back to home
-            </Link>
+          <header className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight">
+              Flagged phone numbers
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Public list of phone numbers that have been connected to potential risk or confirmed scams.
+            </p>
           </header>
+
+          <StatusLegend className="max-w-2xl" />
 
           <section className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

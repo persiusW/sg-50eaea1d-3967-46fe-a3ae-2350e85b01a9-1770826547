@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { StatusLegend } from "@/components/StatusLegend";
 
 type BusinessStatus =
 "UNDER_REVIEW" |
@@ -326,17 +327,18 @@ const BusinessDetailPage: NextPage = () => {
                 Business profile
               </h1>
               <p className="text-sm text-muted-foreground">
-                Public, read-only record of this business and its reported
-                experiences.
+                Public, read-only record of this business and its reported experiences.
               </p>
             </div>
             <Link
               href="/businesses"
-              className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap">
-
+              className="whitespace-nowrap text-xs text-muted-foreground hover:text-foreground"
+            >
               Back to search
             </Link>
           </header>
+
+          <StatusLegend className="max-w-2xl" />
 
           {loading ?
           <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
