@@ -41,7 +41,7 @@ interface FormState {
   location: string;
   branches_count: string;
   category: string;
-  status: BusinessStatus | "NONE";
+  status: BusinessStatus | "__NONE__";
 }
 
 const statusLabel: Record<BusinessStatus, string> = {
@@ -62,7 +62,7 @@ const AdminBusinessesPage: NextPage = () => {
     location: "",
     branches_count: "",
     category: "",
-    status: "NONE",
+    status: "__NONE__",
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -107,7 +107,7 @@ const AdminBusinessesPage: NextPage = () => {
       location: "",
       branches_count: "",
       category: "",
-      status: "NONE",
+      status: "__NONE__",
     });
     setEditingId(null);
     setFormError(null);
@@ -128,7 +128,7 @@ const AdminBusinessesPage: NextPage = () => {
         ? String(biz.branches_count)
         : "",
       category: biz.category,
-      status: biz.status ?? "NONE",
+      status: biz.status ?? "__NONE__",
     });
     setFormError(null);
   };
@@ -165,7 +165,7 @@ const AdminBusinessesPage: NextPage = () => {
         ? null
         : branchesCountNumber,
       category,
-      status: status === "NONE" ? null : status,
+      status: status === "__NONE__" ? null : status,
       verified: true,
       created_by_admin: true,
     };
@@ -355,7 +355,7 @@ const AdminBusinessesPage: NextPage = () => {
                     <Label htmlFor="status">Status</Label>
                     <Select
                       value={form.status}
-                      onValueChange={(value: BusinessStatus | "NONE") =>
+                      onValueChange={(value: BusinessStatus | "__NONE__") =>
                         handleFormChange("status", value)
                       }
                     >
@@ -363,7 +363,7 @@ const AdminBusinessesPage: NextPage = () => {
                         <SelectValue placeholder="No status (null) or select one" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="NONE">
+                        <SelectItem value="__NONE__">
                           No status (null)
                         </SelectItem>
                         <SelectItem value="UNDER_REVIEW">
