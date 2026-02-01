@@ -53,12 +53,16 @@ const Home: NextPage = () => {
                         >
                           <Link href="/report">Report a scam</Link>
                         </Button>
+                        <Button
+                          asChild
+                          size="lg"
+                          className="w-full border-red-500 text-red-600 hover:bg-red-50 sm:w-auto dark:border-red-400 dark:text-red-300 dark:hover:bg-red-950/40"
+                        >
+                          <Link href="/flagged-numbers">View flagged numbers</Link>
+                        </Button>
                       </div>
                     </div>
 
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Phone numbers are used to reduce misuse and are not shown publicly.
-                    </p>
                     <Link
                       href="/flagged-numbers"
                       className="mt-2 inline-flex text-xs text-muted-foreground underline-offset-4 hover:underline"
