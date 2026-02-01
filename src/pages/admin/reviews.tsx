@@ -31,6 +31,8 @@ const REVIEW_STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "SPAM", label: "SPAM" },
 ];
 
+const PAGE_SIZE = 25;
+
 const AdminReviewsPage: NextPage = () => {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -40,6 +42,8 @@ const AdminReviewsPage: NextPage = () => {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [statusErrors, setStatusErrors] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -58,12 +62,17 @@ const AdminReviewsPage: NextPage = () => {
 
     const fetchReviews = async () => {
       setLoading(true);
+
+      const from = (page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       const { data, error } = await supabase
         .from("reviews")
         .select(
           "id,business_id,reviewer_phone,reviewer_name,rating,body,status,created_at,businesses(name)"
         )
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
       if (!error && data) {
         const mapped: ReviewRow[] = (data as any[]).map((row) => ({
@@ -79,12 +88,17 @@ const AdminReviewsPage: NextPage = () => {
           status: (row.status as string | null) ?? null,
         }));
         setReviews(mapped);
+        setHasMore(data.length === PAGE_SIZE);
+      } else {
+        setReviews([]);
+        setHasMore(false);
       }
+
       setLoading(false);
     };
 
     void fetchReviews();
-  }, [checkingAuth]);
+  }, [checkingAuth, page]);
 
   const handleStatusChange = async (review: ReviewRow, value: string) => {
     const previous = review.status ?? null;
@@ -122,6 +136,39 @@ const AdminReviewsPage: NextPage = () => {
     setSavingId(null);
   };
 
+  const refreshPage = async (pageToLoad: number) => {
+    const from = (pageToLoad - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const { data, error } = await supabase
+      .from("reviews")
+      .select(
+        "id,business_id,reviewer_phone,reviewer_name,rating,body,status,created_at,businesses(name)"
+      )
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (!error && data) {
+      const mapped: ReviewRow[] = (data as any[]).map((row) => ({
+        id: row.id as string,
+        business_id: row.business_id as string,
+        business_name:
+          (row.businesses && (row.businesses as any).name) || "Unknown",
+        reviewer_phone: row.reviewer_phone as string,
+        reviewer_name: (row.reviewer_name as string | null) ?? null,
+        rating: row.rating as number,
+        body: row.body as string,
+        created_at: row.created_at as string,
+        status: (row.status as string | null) ?? null,
+      }));
+      setReviews(mapped);
+      setHasMore(data.length === PAGE_SIZE);
+    } else {
+      setReviews([]);
+      setHasMore(false);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     const confirmed = window.confirm(
       "Delete this review? This action cannot be undone."
@@ -131,28 +178,7 @@ const AdminReviewsPage: NextPage = () => {
     setDeletingId(id);
     const { error } = await supabase.from("reviews").delete().eq("id", id);
     if (!error) {
-      const { data } = await supabase
-        .from("reviews")
-        .select(
-          "id,business_id,reviewer_phone,reviewer_name,rating,body,status,created_at,businesses(name)"
-        )
-        .order("created_at", { ascending: false });
-
-      if (data) {
-        const mapped: ReviewRow[] = (data as any[]).map((row) => ({
-          id: row.id as string,
-          business_id: row.business_id as string,
-          business_name:
-            (row.businesses && (row.businesses as any).name) || "Unknown",
-          reviewer_phone: row.reviewer_phone as string,
-          reviewer_name: (row.reviewer_name as string | null) ?? null,
-          rating: row.rating as number,
-          body: row.body as string,
-          created_at: row.created_at as string,
-          status: (row.status as string | null) ?? null,
-        }));
-        setReviews(mapped);
-      }
+      await refreshPage(page);
     }
     setDeletingId(null);
   };
@@ -353,6 +379,34 @@ const AdminReviewsPage: NextPage = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((prev) => (prev > 1 && !loading ? prev - 1 : prev))
+                }
+                disabled={page === 1 || loading}
+                className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <p className="text-[11px] text-muted-foreground">
+                Page {page}
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  setPage((prev) =>
+                    hasMore && !loading ? prev + 1 : prev
+                  )
+                }
+                disabled={!hasMore || loading}
+                className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+              >
+                Next
+              </button>
             </div>
 
             <p className="text-[11px] text-muted-foreground">

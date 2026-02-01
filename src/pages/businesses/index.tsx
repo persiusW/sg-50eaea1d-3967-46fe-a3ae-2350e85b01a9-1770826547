@@ -41,46 +41,57 @@ const statusBadgeClass: Record<Exclude<BusinessStatus, "VERIFIED">, string> = {
     "bg-red-600 text-red-50 border border-red-700 dark:bg-red-900 dark:text-red-100",
 };
 
+const PAGE_SIZE = 25;
+
 export default function BusinessesPage() {
   const [query, setQuery] = useState("");
   const [businesses, setBusinesses] = useState<BusinessListItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
-  const fetchBusinesses = async (search?: string) => {
+  const fetchBusinesses = async (search: string, pageToLoad: number) => {
     setLoading(true);
 
-    const baseQuery = supabase
+    const from = (pageToLoad - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    let baseQuery = supabase
       .from("businesses_with_ratings")
       .select(
-        "id,name,phone,category,status,verified,created_at,avg_rating,reviews_count",
+        "id,name,phone,category,status,verified,created_at,avg_rating,reviews_count"
       )
       .order("created_at", { ascending: false });
 
-    const queryBuilder =
-      search && search.trim().length > 0
-        ? baseQuery.or(
-            `name.ilike.%${search.trim()}%,phone.ilike.%${search.trim()}%`,
-          )
-        : baseQuery.limit(20);
+    const trimmed = search.trim();
+    if (trimmed.length > 0) {
+      baseQuery = baseQuery.or(
+        `name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`
+      );
+    }
 
-    const { data } = await queryBuilder;
+    const { data } = await baseQuery.range(from, to);
 
     if (data) {
       setBusinesses(data as BusinessListItem[]);
+      setHasMore(data.length === PAGE_SIZE);
     } else {
       setBusinesses([]);
+      setHasMore(false);
     }
 
     setLoading(false);
   };
 
   useEffect(() => {
-    void fetchBusinesses();
+    void fetchBusinesses("", 1);
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetchBusinesses(query);
+    const nextPage = 1;
+    setPage(nextPage);
+    await fetchBusinesses(query, nextPage);
   };
 
   const renderStatusCell = (biz: BusinessListItem) => {
@@ -197,50 +208,85 @@ export default function BusinessesPage() {
               )}
 
               {!loading && businesses.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-xs sm:text-sm">
-                    <thead>
-                      <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                        <th className="py-2 pr-3 font-medium">Business</th>
-                        <th className="py-2 px-3 font-medium">Category</th>
-                        <th className="py-2 px-3 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {businesses.map((biz) => (
-                        <tr
-                          key={biz.id}
-                          className="border-b border-border/60 last:border-0"
-                        >
-                          <td className="py-2 pr-3 align-middle">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                href={`/businesses/${biz.id}`}
-                                className="text-sm font-medium hover:underline"
-                              >
-                                {biz.name}
-                              </Link>
-                              {biz.verified && (
-                                <Badge className="bg-emerald-600 text-emerald-50">
-                                  Verified
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="mt-0.5 text-[11px] text-muted-foreground">
-                              {biz.phone}
-                            </div>
-                          </td>
-                          <td className="py-2 px-3 align-middle">
-                            {biz.category}
-                          </td>
-                          <td className="py-2 px-3 align-middle">
-                            {renderStatusCell(biz)}
-                          </td>
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-xs sm:text-sm">
+                      <thead>
+                        <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                          <th className="py-2 pr-3 font-medium">Business</th>
+                          <th className="py-2 px-3 font-medium">Category</th>
+                          <th className="py-2 px-3 font-medium">Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {businesses.map((biz) => (
+                          <tr
+                            key={biz.id}
+                            className="border-b border-border/60 last:border-0"
+                          >
+                            <td className="py-2 pr-3 align-middle">
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/businesses/${biz.id}`}
+                                  className="text-sm font-medium hover:underline"
+                                >
+                                  {biz.name}
+                                </Link>
+                                {biz.verified && (
+                                  <Badge className="bg-emerald-600 text-emerald-50">
+                                    Verified
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                {biz.phone}
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 align-middle">
+                              {biz.category}
+                            </td>
+                            <td className="py-2 px-3 align-middle">
+                              {renderStatusCell(biz)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 text-xs">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const nextPage = Math.max(1, page - 1);
+                        if (nextPage !== page) {
+                          setPage(nextPage);
+                          await fetchBusinesses(query, nextPage);
+                        }
+                      }}
+                      disabled={page === 1}
+                      className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <p className="text-[11px] text-muted-foreground">
+                      Page {page}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!hasMore) return;
+                        const nextPage = page + 1;
+                        setPage(nextPage);
+                        await fetchBusinesses(query, nextPage);
+                      }}
+                      disabled={!hasMore}
+                      className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </section>
