@@ -25,6 +25,7 @@ export type Database = {
           location: string | null
           name: string
           phone: string
+          platforms: string[] | null
           status: string | null
           verified: boolean
         }
@@ -37,6 +38,7 @@ export type Database = {
           location?: string | null
           name: string
           phone: string
+          platforms?: string[] | null
           status?: string | null
           verified?: boolean
         }
@@ -49,6 +51,7 @@ export type Database = {
           location?: string | null
           name?: string
           phone?: string
+          platforms?: string[] | null
           status?: string | null
           verified?: boolean
         }
@@ -158,6 +161,91 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scam_reports: {
+        Row: {
+          business_category: string | null
+          business_id: string | null
+          business_location: string | null
+          connected_page: string | null
+          converted_at: string | null
+          converted_review_id: string | null
+          created_at: string
+          description: string
+          evidence_url: string | null
+          id: string
+          name_on_number: string | null
+          phone: string | null
+          platform: string | null
+          platforms: string[] | null
+          report_type: string
+          status: string
+          submitter_name: string
+          submitter_phone: string
+        }
+        Insert: {
+          business_category?: string | null
+          business_id?: string | null
+          business_location?: string | null
+          connected_page?: string | null
+          converted_at?: string | null
+          converted_review_id?: string | null
+          created_at?: string
+          description: string
+          evidence_url?: string | null
+          id?: string
+          name_on_number?: string | null
+          phone?: string | null
+          platform?: string | null
+          platforms?: string[] | null
+          report_type: string
+          status?: string
+          submitter_name: string
+          submitter_phone: string
+        }
+        Update: {
+          business_category?: string | null
+          business_id?: string | null
+          business_location?: string | null
+          connected_page?: string | null
+          converted_at?: string | null
+          converted_review_id?: string | null
+          created_at?: string
+          description?: string
+          evidence_url?: string | null
+          id?: string
+          name_on_number?: string | null
+          phone?: string | null
+          platform?: string | null
+          platforms?: string[] | null
+          report_type?: string
+          status?: string
+          submitter_name?: string
+          submitter_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scam_reports_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scam_reports_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scam_reports_converted_review_id_fkey"
+            columns: ["converted_review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
             referencedColumns: ["id"]
           },
         ]

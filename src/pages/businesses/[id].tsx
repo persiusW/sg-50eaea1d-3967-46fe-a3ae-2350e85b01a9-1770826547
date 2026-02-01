@@ -30,6 +30,7 @@ interface Business {
   status: BusinessStatus | null;
   verified: boolean;
   created_at: string;
+  platforms?: string[] | null;
 }
 
 interface Review {
@@ -423,7 +424,24 @@ const BusinessDetailPage: NextPage = () => {
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground">Reviews on this page are shared publicly by individuals based on their experiences.
+                  {Array.isArray(business.platforms) &&
+                  business.platforms.length > 0 && (
+                    <div className="mt-2 space-y-1 text-xs">
+                      <p className="text-muted-foreground">Platforms</p>
+                      <div className="flex flex-wrap gap-1">
+                        {business.platforms.map((p) => (
+                          <span
+                            key={p}
+                            className="rounded-full bg-muted px-2 py-0.5 text-[11px]"
+                          >
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="mt-3 text-[11px] text-muted-foreground">Reviews on this page are shared publicly by individuals based on their experiences.
 Please keep contributions respectful, factual, and constructive.
 
                 </p>

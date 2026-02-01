@@ -25,6 +25,9 @@ type ScamReportRow = {
   converted_review_id: string | null;
   converted_at: string | null;
   name_on_number: string | null;
+  business_category: string | null;
+  business_location: string | null;
+  platforms: string[] | null;
 };
 
 interface BusinessOption {
@@ -155,7 +158,7 @@ const AdminReportsPage: NextPage = () => {
     const { data, error: fetchError } = await supabase
       .from("scam_reports")
       .select(
-        "id,report_type,phone,name_on_number,connected_page,platform,description,submitter_name,submitter_phone,evidence_url,status,business_id,converted_review_id,converted_at,created_at",
+        "id,report_type,phone,name_on_number,connected_page,platform,description,submitter_name,submitter_phone,evidence_url,status,business_id,converted_review_id,converted_at,created_at,business_category,business_location,platforms",
       )
       .order("created_at", { ascending: false })
       .range(from, to);
@@ -336,15 +339,29 @@ const AdminReportsPage: NextPage = () => {
     if (existingBiz) {
       businessId = existingBiz.id as string;
     } else {
+      const category =
+        report.business_category && report.business_category.trim().length > 0
+          ? report.business_category.trim()
+          : "Other";
+
+      const location =
+        report.business_location && report.business_location.trim().length > 0
+          ? report.business_location.trim()
+          : null;
+
       const businessPayload = {
         name: nameToUse,
         phone: phoneToUse,
-        category: "Other",
-        location: null,
+        category,
+        location,
         branches_count: 1,
         verified: false,
         created_by_admin: true,
         status: "UNDER_REVIEW",
+        platforms:
+          report.platforms && report.platforms.length > 0
+            ? report.platforms
+            : null,
       };
 
       const { data: newBiz, error: insertBizError } = await supabase

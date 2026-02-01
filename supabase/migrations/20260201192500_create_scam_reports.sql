@@ -48,3 +48,9 @@ begin
   end if;
 end
 $$;
+
+ALTER TABLE public.scam_reports
+ADD COLUMN IF NOT EXISTS platforms text[] NULL;
+
+ALTER TABLE public.businesses
+ADD COLUMN IF NOT EXISTS platforms text[] NULL;
