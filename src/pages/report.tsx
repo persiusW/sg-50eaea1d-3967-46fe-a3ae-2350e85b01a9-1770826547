@@ -99,11 +99,15 @@ const ReportPage: NextPage = () => {
     <>
       <SEO
         title="Report a scam – Transparent Turtle"
-        description="Submit information about a suspected scam so it can be reviewed for safety and accuracy."
+        description="Submit a scam report to help others stay safe."
       />
       <PublicLayout>
         <div className="container min-h-screen py-8">
           <div className="mx-auto max-w-2xl space-y-6">
+            <p className="text-xs font-semibold text-red-600">
+              REPORT FORM v2 — category + location
+            </p>
+
             <header className="space-y-2">
               <h1 className="text-xl font-semibold tracking-tight">
                 Report a scam

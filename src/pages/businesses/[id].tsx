@@ -11,6 +11,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusLegend } from "@/components/StatusLegend";
+import { PublicNav } from "@/components/PublicNav";
 
 type BusinessStatus =
 "UNDER_REVIEW" |
@@ -581,68 +582,74 @@ Please keep contributions respectful, factual, and constructive.
                     </p>
                   </div>
 
-                  {loadingReviews ?
-                <p className="mt-3 text-xs text-muted-foreground">
-                      Loading reviews…
-                    </p> :
-                reviews.length === 0 ?
-                <p className="mt-3 text-xs text-muted-foreground">
-                      No reviews yet. Be the first to share your
-                      experience.
-                    </p> :
+                  <main className="min-h-screen bg-background text-foreground">
+                    <div className="container flex min-h-screen flex-col gap-6 py-8">
+                      <PublicNav />
 
-                <div className="mt-3 space-y-3 text-xs">
-                      {reviews.map((review) => {
-                    const phoneKey = review.reviewer_phone?.trim() || "";
-                    let transparencyLabel: "First review" | "Updated opinion" | null = null;
+                      {loadingReviews ?
+                    <p className="mt-3 text-xs text-muted-foreground">
+                          Loading reviews…
+                        </p> :
+                    reviews.length === 0 ?
+                    <p className="mt-3 text-xs text-muted-foreground">
+                          No reviews yet. Be the first to share your
+                          experience.
+                        </p> :
 
-                    if (phoneKey && reviewMeta[phoneKey]) {
-                      const meta = reviewMeta[phoneKey];
-                      if (meta.count > 0) {
-                        if (review.created_at === meta.earliestCreatedAt) {
-                          transparencyLabel = "First review";
-                        } else {
-                          transparencyLabel = "Updated opinion";
+                    <div className="mt-3 space-y-3 text-xs">
+                          {reviews.map((review) => {
+                        const phoneKey = review.reviewer_phone?.trim() || "";
+                        let transparencyLabel: "First review" | "Updated opinion" | null = null;
+
+                        if (phoneKey && reviewMeta[phoneKey]) {
+                          const meta = reviewMeta[phoneKey];
+                          if (meta.count > 0) {
+                            if (review.created_at === meta.earliestCreatedAt) {
+                              transparencyLabel = "First review";
+                            } else {
+                              transparencyLabel = "Updated opinion";
+                            }
+                          }
                         }
-                      }
-                    }
 
-                    const isFlagged =
-                    !!phoneKey && flaggedPhones.has(phoneKey);
+                        const isFlagged =
+                        !!phoneKey && flaggedPhones.has(phoneKey);
 
-                    return (
-                      <div
-                        key={review.id}
-                        className="rounded-md border border-border/70 bg-background/70 p-3">
+                        return (
+                          <div
+                            key={review.id}
+                            className="rounded-md border border-border/70 bg-background/70 p-3">
 
-                            <div className="flex items-center justify-between gap-2">
-                              <div>
-                                <p className="font-medium">
-                                  {review.reviewer_name?.trim() || "Unnamed reviewer"}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div>
+                                    <p className="font-medium">
+                                      {review.reviewer_name?.trim() || "Unnamed reviewer"}
+                                    </p>
+                                    {transparencyLabel &&
+                                <p className="text-[11px] text-muted-foreground">
+                                        {transparencyLabel}
+                                      </p>
+                                }
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Rating: {review.rating}/5
+                                  </p>
+                                </div>
+                                <p className="mt-1 text-muted-foreground">
+                                  {review.body}
                                 </p>
-                                {transparencyLabel &&
-                            <p className="text-[11px] text-muted-foreground">
-                                    {transparencyLabel}
+                                {isFlagged &&
+                            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                                    This number has been reported in other cases.
                                   </p>
                             }
-                              </div>
-                              <p className="text-[11px] text-muted-foreground">
-                                Rating: {review.rating}/5
-                              </p>
-                            </div>
-                            <p className="mt-1 text-muted-foreground">
-                              {review.body}
-                            </p>
-                            {isFlagged &&
-                        <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
-                                This number has been reported in other cases.
-                              </p>
-                        }
-                          </div>);
+                              </div>);
 
-                  })}
+                      })}
+                        </div>
+                    }
                     </div>
-                }
+                  </main>
                 </div>
               </section>
             </div> :
