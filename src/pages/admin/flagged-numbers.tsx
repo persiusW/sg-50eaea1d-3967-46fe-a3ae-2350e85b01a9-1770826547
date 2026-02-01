@@ -63,6 +63,20 @@ const STATUS_PREFIX: Partial<Record<FlagStatus, string>> = {
   VERIFIED: "⛔ ",
 };
 
+interface FlaggedRow {
+  id: string;
+  phone: string;
+  name_on_number: string | null;
+  connected_page: string | null;
+  admin_note: string | null;
+  status: string | null;
+  created_at: string;
+}
+
+interface FlaggedErrorState {
+  [id: string]: string | null;
+}
+
 export default function AdminFlaggedNumbersPage() {
   const [items, setItems] = useState<FlaggedNumber[]>([]);
   const [loading, setLoading] = useState(false);
@@ -79,6 +93,8 @@ export default function AdminFlaggedNumbersPage() {
   const [page, setPage] = useState(1);
   const [isLastPage, setIsLastPage] = useState(false);
   const [loadingPage, setLoadingPage] = useState(false);
+  const [rowErrors, setRowErrors] = useState<FlaggedErrorState>({});
+  const [savingIds, setSavingIds] = useState<string[]>([]);
 
   const load = async (pageNumber: number) => {
     setLoading(true);
@@ -160,6 +176,39 @@ export default function AdminFlaggedNumbersPage() {
       }
     }
     setSaving(false);
+  };
+
+  const handleFlaggedStatusChange = async (rowId: string, nextStatus: FlagStatus) => {
+    setRowErrors((prev) => ({ ...prev, [rowId]: null }));
+    setSavingIds((prev) => [...prev, rowId]);
+
+    setItems((prev) =>
+      prev.map((row) =>
+        row.id === rowId ? { ...row, status: nextStatus } : row
+      )
+    );
+
+    const target = items.find((r) => r.id === rowId);
+    const previousStatus = target?.status ?? null;
+
+    const { error } = await supabase
+      .from("flagged_numbers")
+      .update({ status: nextStatus })
+      .eq("id", rowId);
+
+    if (error) {
+      setRowErrors((prev) => ({
+        ...prev,
+        [rowId]: "Could not update status.",
+      }));
+      setItems((prev) =>
+        prev.map((row) =>
+          row.id === rowId ? { ...row, status: previousStatus || "UNDER_REVIEW" } : row
+        )
+      );
+    }
+
+    setSavingIds((prev) => prev.filter((id) => id !== rowId));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -426,23 +475,34 @@ export default function AdminFlaggedNumbersPage() {
                                 : STATUS_LABEL[item.status]}
                             </span>
                           </td>
-                          <td className="py-2 px-3 align-middle">
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleEdit(item)}
-                                className="text-[11px] text-emerald-700 hover:underline dark:text-emerald-300"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(item.id)}
-                                className="text-[11px] text-red-600 hover:underline"
-                              >
-                                Delete
-                              </button>
+                          <td className="px-2 py-2 text-[11px]">
+                            <div className="flex flex-wrap items-center gap-1">
+                              {item.status !== "UNDER_REVIEW" && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleFlaggedStatusChange(item.id, "UNDER_REVIEW")}
+                                  disabled={savingIds.includes(item.id)}
+                                  className="rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800 disabled:opacity-60 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
+                                >
+                                  Under review
+                                </button>
+                              )}
+                              {item.status !== "VERIFIED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleFlaggedStatusChange(item.id, "VERIFIED")}
+                                  disabled={savingIds.includes(item.id)}
+                                  className="rounded-full border border-red-400 bg-red-50 px-2 py-0.5 text-[10px] text-red-700 disabled:opacity-60 dark:border-red-500 dark:bg-red-950/40 dark:text-red-200"
+                                >
+                                  Confirmed scam
+                                </button>
+                              )}
                             </div>
+                            {rowErrors[item.id] && (
+                              <p className="mt-1 text-[10px] text-destructive-foreground">
+                                {rowErrors[item.id]}
+                              </p>
+                            )}
                           </td>
                         </tr>
                       ))}
