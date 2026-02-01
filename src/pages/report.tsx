@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { NextPage } from "next";
 import { SEO } from "@/components/SEO";
 import { PublicLayout } from "@/components/PublicLayout";
@@ -9,226 +9,361 @@ import { Textarea } from "@/components/ui/textarea";
 
 type ReportType = "PHONE" | "BUSINESS";
 
-const PLATFORMS = [
-  "Instagram",
-  "WhatsApp",
-  "Facebook",
-  "TikTok",
-  "Website",
-  "Other",
-];
+interface ReportFormState {
+  report_type: ReportType;
+  phone: string;
+  connected_page: string;
+  name_on_number: string;
+  platform: string;
+  description: string;
+  evidence_url: string;
+  business_location: string;
+  business_category: string;
+  business_category_other: string;
+  submitter_name: string;
+  submitter_phone: string;
+}
+
+const COMMON_CATEGORIES: string[] = [
+"Financial services",
+"Online marketplace",
+"Delivery / logistics",
+"Investment",
+"Real estate",
+"Charity / donation",
+"Government / public services",
+"Tech support",
+"Travel / booking"];
+
 
 const ReportPage: NextPage = () => {
-  const [reportType, setReportType] = useState<ReportType>("PHONE");
-  const [phone, setPhone] = useState("");
-  const [nameOnNumber, setNameOnNumber] = useState("");
-  const [connectedPage, setConnectedPage] = useState("");
-  const [platform, setPlatform] = useState<string>("Instagram");
-  const [description, setDescription] = useState("");
-  const [submitterName, setSubmitterName] = useState("");
-  const [submitterPhone, setSubmitterPhone] = useState("");
-  const [evidenceUrl, setEvidenceUrl] = useState("");
+  const [form, setForm] = useState<ReportFormState>({
+    report_type: "PHONE",
+    phone: "",
+    connected_page: "",
+    name_on_number: "",
+    platform: "",
+    description: "",
+    evidence_url: "",
+    business_location: "",
+    business_category: "",
+    business_category_other: "",
+    submitter_name: "",
+    submitter_phone: ""
+  });
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [dbCategories, setDbCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      const { data, error } = await supabase.
+      from("businesses").
+      select("category").
+      not("category", "is", null);
+
+      if (error || !data) {
+        setDbCategories([]);
+        return;
+      }
+
+      const values = Array.from(
+        new Set(
+          (data as {category: string | null;}[]).
+          map((row) => row.category?.trim()).
+          filter((c): c is string => !!c && c.length > 0)
+        )
+      );
+      setDbCategories(values);
+    };
+
+    void loadCategories();
+  }, []);
+
+  const mergedCategories: string[] = useMemo(() => {
+    const set = new Set<string>();
+    COMMON_CATEGORIES.forEach((c) => set.add(c));
+    dbCategories.forEach((c) => set.add(c));
+    set.delete("Other");
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [dbCategories]);
+
+  const handleChange = (field: keyof ReportFormState, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+    if (field === "report_type") {
+      setSubmitError(null);
+      setSubmitSuccess(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
-    if (!description.trim() || !submitterName.trim() || !submitterPhone.trim()) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-    if (reportType === "PHONE" && !phone.trim()) {
-      setError("Phone number is required for phone reports.");
-      return;
-    }
-
     setSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
 
-    const { error: insertError } = await supabase.from("scam_reports").insert({
-      report_type: reportType,
-      phone: phone.trim() || null,
-      name_on_number: nameOnNumber.trim() || null,
-      connected_page: connectedPage.trim() || null,
-      platform: platform || null,
-      description: description.trim(),
-      submitter_name: submitterName.trim(),
-      submitter_phone: submitterPhone.trim(),
-      evidence_url: evidenceUrl.trim() || null,
-      status: "NEW",
+    const categoryToStore =
+    form.business_category === "Other" ?
+    form.business_category_other.trim() || "Other" :
+    form.business_category.trim() || null;
+
+    const locationToStore =
+    form.business_location.trim().length > 0 ?
+    form.business_location.trim() :
+    null;
+
+    const { error } = await supabase.from("scam_reports").insert({
+      report_type: form.report_type,
+      phone: form.phone.trim() || null,
+      connected_page: form.connected_page.trim() || null,
+      name_on_number: form.name_on_number.trim() || null,
+      platform: form.platform.trim() || null,
+      description: form.description.trim(),
+      evidence_url: form.evidence_url.trim() || null,
+      business_category: categoryToStore,
+      business_location: locationToStore,
+      submitter_name: form.submitter_name.trim() || null,
+      submitter_phone: form.submitter_phone.trim() || null
     });
 
-    if (insertError) {
-      setError("Could not submit report. Please try again.");
+    if (error) {
+      setSubmitError("Unable to submit report. Please try again.");
       setSubmitting(false);
       return;
     }
 
-    setSubmitted(true);
+    setSubmitSuccess(true);
     setSubmitting(false);
+    setForm((prev) => ({
+      ...prev,
+      phone: "",
+      connected_page: "",
+      name_on_number: "",
+      platform: "",
+      description: "",
+      evidence_url: "",
+      business_location: "",
+      business_category: "",
+      business_category_other: "",
+      submitter_name: "",
+      submitter_phone: ""
+    }));
   };
 
-  if (submitted) {
-    return (
-      <>
-        <SEO
-          title="Report received – Transparent Turtle"
-          description="Thank you for submitting a report to help keep the community safer."
-        />
-        <PublicLayout>
-          <div className="container flex min-h-screen items-center justify-center py-12">
-            <div className="max-w-md rounded-lg border border-border bg-card p-6 text-sm">
-              <h1 className="text-lg font-semibold tracking-tight">
-                Report received
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Thank you for helping keep the community safer. Reports are
-                reviewed for safety and accuracy before any information appears
-                publicly.
-              </p>
-            </div>
-          </div>
-        </PublicLayout>
-      </>
-    );
-  }
+  const showBusinessFields = form.report_type === "BUSINESS";
 
   return (
     <>
       <SEO
-        title="Report a scam – Transparent Turtle"
-        description="Submit a scam report to help others stay safe."
-      />
+        title="Report a suspicious business or phone number – Transparent Turtle"
+        description="Share a suspicious interaction so others can see patterns and stay safe." />
+
       <PublicLayout>
-        <div className="container min-h-screen py-8">
-          <div className="mx-auto max-w-2xl space-y-6">
+        <div className="container flex min-h-screen flex-col gap-6 py-8" style={{ padding: "auto" }}>
+          <header className="space-y-2">
             <p className="text-xs font-semibold text-red-600">
               REPORT FORM v2 — category + location
             </p>
+            <h1 className="text-xl font-semibold tracking-tight">
+              Report a suspicious business or phone number
+            </h1>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Share details about a suspicious call, message, or interaction.
+              Your report helps others see patterns and make safer decisions.
+            </p>
+          </header>
 
-            <header className="space-y-2">
-              <h1 className="text-xl font-semibold tracking-tight">
-                Report a scam
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Use this form to share information about a suspected scam or
-                risky business. Reports are reviewed for safety and accuracy
-                before any information appears publicly.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Do not include passwords, OTP codes, or bank details.
-              </p>
-            </header>
+          <main className="max-w-2xl space-y-6">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4 text-sm"
+              noValidate>
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+              {/* Type of report */}
               <div className="space-y-1">
-                <p className="text-xs font-medium text-foreground">
-                  Type of report <span className="text-red-500">*</span>
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <label className="inline-flex items-center gap-2 text-xs">
-                    <input
-                      type="radio"
-                      name="report_type"
-                      value="PHONE"
-                      checked={reportType === "PHONE"}
-                      onChange={() => setReportType("PHONE")}
-                    />
-                    <span>Phone number</span>
-                  </label>
-                  <label className="inline-flex items-center gap-2 text-xs">
-                    <input
-                      type="radio"
-                      name="report_type"
-                      value="BUSINESS"
-                      checked={reportType === "BUSINESS"}
-                      onChange={() => setReportType("BUSINESS")}
-                    />
-                    <span>Business / Page</span>
-                  </label>
+                <label className="block text-xs font-medium text-foreground">
+                  Type of report
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-1.5 text-xs ${
+                    form.report_type === "PHONE" ?
+                    "border-emerald-600 bg-emerald-50 text-emerald-800" :
+                    "border-border bg-background text-foreground"}`
+                    }
+                    onClick={() => handleChange("report_type", "PHONE")}>
+
+                    Phone number
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-md border px-3 py-1.5 text-xs ${
+                    form.report_type === "BUSINESS" ?
+                    "border-emerald-600 bg-emerald-50 text-emerald-800" :
+                    "border-border bg-background text-foreground"}`
+                    }
+                    onClick={() => handleChange("report_type", "BUSINESS")}>
+
+                    Business / Page
+                  </button>
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* Phone involved + Name on number (2-column on md+) */}
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-foreground">
-                    Phone number {reportType === "PHONE" && <span className="text-red-500">*</span>}
+                    Phone number involved{" "}
+                    <span className="text-muted-foreground">(optional)</span>
                   </label>
                   <Input
                     type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Number involved in the scam"
-                  />
-                </div>
+                    value={form.phone}
+                    onChange={(e) => handleChange("phone", e.target.value)}
+                    placeholder="+1 (___) ___-____" />
 
+                </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-foreground">
-                    Name on number
+                    Name on number{" "}
+                    <span className="text-muted-foreground">(optional)</span>
                   </label>
                   <Input
                     type="text"
-                    value={nameOnNumber}
-                    onChange={(e) => setNameOnNumber(e.target.value)}
-                    placeholder="If known"
-                  />
-                </div>
+                    value={form.name_on_number}
+                    onChange={(e) =>
+                    handleChange("name_on_number", e.target.value)
+                    }
+                    placeholder="Name used in messages or calls" />
 
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="block text-xs font-medium text-foreground">
-                    Connected page / business name
-                  </label>
-                  <Input
-                    type="text"
-                    value={connectedPage}
-                    onChange={(e) => setConnectedPage(e.target.value)}
-                    placeholder="Business, page, or profile name"
-                  />
-                </div>
-
-                <div className="space-y-1 sm:col-span-2">
-                  <label className="block text-xs font-medium text-foreground">
-                    Platform
-                  </label>
-                  <select
-                    className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    value={platform}
-                    onChange={(e) => setPlatform(e.target.value)}
-                  >
-                    {PLATFORMS.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
 
+              {/* Connected page / business name (full width) */}
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-foreground">
+                  Connected page / business name{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </label>
+                <Input
+                  type="text"
+                  value={form.connected_page}
+                  onChange={(e) =>
+                  handleChange("connected_page", e.target.value)
+                  }
+                  placeholder="Website, social profile, or business name" />
+
+              </div>
+
+              {/* Business location + type (full width fields, visible at least for BUSINESS) */}
+              {showBusinessFields &&
+              <>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-foreground">
+                      Business / Scam location{" "}
+                      <span className="text-muted-foreground">(optional)</span>
+                    </label>
+                    <Input
+                    type="text"
+                    value={form.business_location}
+                    onChange={(e) =>
+                    handleChange("business_location", e.target.value)
+                    }
+                    placeholder="City, area, or country" />
+
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-foreground">
+                      Business type{" "}
+                      <span className="text-muted-foreground">
+                        (optional but recommended)
+                      </span>
+                    </label>
+                    <select
+                    className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                    value={form.business_category}
+                    onChange={(e) =>
+                    handleChange("business_category", e.target.value)
+                    }>
+
+                      <option value="">Select a type</option>
+                      {mergedCategories.map((cat) =>
+                    <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                    )}
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  {form.business_category === "Other" &&
+                <div className="space-y-1">
+                      <label className="block text-xs font-medium text-foreground">
+                        Specify category
+                      </label>
+                      <Input
+                    type="text"
+                    value={form.business_category_other}
+                    onChange={(e) =>
+                    handleChange(
+                      "business_category_other",
+                      e.target.value
+                    )
+                    }
+                    placeholder="e.g. Investment scheme, Crypto exchange" />
+
+                    </div>
+                }
+                </>
+              }
+
+              {/* Platform (full width) */}
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-foreground">
+                  Platform{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </label>
+                <Input
+                  type="text"
+                  value={form.platform}
+                  onChange={(e) => handleChange("platform", e.target.value)}
+                  placeholder="WhatsApp, SMS, Instagram, Facebook, etc." />
+
+              </div>
+
+              {/* Description (full width) */}
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-foreground">
                   Description <span className="text-red-500">*</span>
                 </label>
                 <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  value={form.description}
+                  onChange={(e) => handleChange("description", e.target.value)}
                   rows={4}
-                  placeholder="Describe what happened, including dates, amounts, and any important details."
-                />
+                  placeholder="Describe what happened, including dates, amounts, and any important details." />
+
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* Your name + Your phone (2-column) */}
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-foreground">
                     Your name <span className="text-red-500">*</span>
                   </label>
                   <Input
                     type="text"
-                    value={submitterName}
-                    onChange={(e) => setSubmitterName(e.target.value)}
-                    placeholder="Used only for internal review"
-                  />
+                    value={form.submitter_name}
+                    onChange={(e) =>
+                    handleChange("submitter_name", e.target.value)
+                    }
+                    placeholder="Used only for internal review" />
+
                 </div>
                 <div className="space-y-1">
                   <label className="block text-xs font-medium text-foreground">
@@ -236,30 +371,41 @@ const ReportPage: NextPage = () => {
                   </label>
                   <Input
                     type="text"
-                    value={submitterPhone}
-                    onChange={(e) => setSubmitterPhone(e.target.value)}
-                    placeholder="Used internally, never shown publicly"
-                  />
+                    value={form.submitter_phone}
+                    onChange={(e) =>
+                    handleChange("submitter_phone", e.target.value)
+                    }
+                    placeholder="Used internally, never shown publicly" />
+
                 </div>
               </div>
 
+              {/* Evidence link (full width) */}
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-foreground">
-                  Evidence link
+                  Evidence link{" "}
+                  <span className="text-muted-foreground">(optional)</span>
                 </label>
                 <Input
-                  type="url"
-                  value={evidenceUrl}
-                  onChange={(e) => setEvidenceUrl(e.target.value)}
-                  placeholder="Link to screenshots, posts, or other evidence (optional)"
-                />
+                  type="text"
+                  value={form.evidence_url}
+                  onChange={(e) =>
+                  handleChange("evidence_url", e.target.value)
+                  }
+                  placeholder="Link to screenshots, posts, or other evidence (optional)" />
+
               </div>
 
-              {error && (
-                <p className="text-xs text-destructive-foreground">
-                  {error}
+              {submitError &&
+              <p className="text-xs text-destructive-foreground">
+                  {submitError}
                 </p>
-              )}
+              }
+              {submitSuccess &&
+              <p className="text-xs text-emerald-600">
+                  Thank you. Your report has been submitted.
+                </p>
+              }
 
               <div className="flex items-center gap-3">
                 <Button type="submit" disabled={submitting}>
@@ -267,11 +413,11 @@ const ReportPage: NextPage = () => {
                 </Button>
               </div>
             </form>
-          </div>
+          </main>
         </div>
       </PublicLayout>
-    </>
-  );
+    </>);
+
 };
 
 export default ReportPage;
