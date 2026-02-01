@@ -57,7 +57,7 @@ export type Database = {
       flagged_numbers: {
         Row: {
           admin_note: string | null
-          connected_scam: string | null
+          connected_page: string | null
           created_at: string
           id: string
           name_on_number: string | null
@@ -67,7 +67,7 @@ export type Database = {
         }
         Insert: {
           admin_note?: string | null
-          connected_scam?: string | null
+          connected_page?: string | null
           created_at?: string
           id?: string
           name_on_number?: string | null
@@ -77,7 +77,7 @@ export type Database = {
         }
         Update: {
           admin_note?: string | null
-          connected_scam?: string | null
+          connected_page?: string | null
           created_at?: string
           id?: string
           name_on_number?: string | null
@@ -123,6 +123,7 @@ export type Database = {
           rating: number
           reviewer_name: string | null
           reviewer_phone: string
+          status: string | null
         }
         Insert: {
           body: string
@@ -132,6 +133,7 @@ export type Database = {
           rating: number
           reviewer_name?: string | null
           reviewer_phone: string
+          status?: string | null
         }
         Update: {
           body?: string
@@ -141,6 +143,7 @@ export type Database = {
           rating?: number
           reviewer_name?: string | null
           reviewer_phone?: string
+          status?: string | null
         }
         Relationships: [
           {
@@ -150,11 +153,34 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reviews_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_with_ratings"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      businesses_with_ratings: {
+        Row: {
+          avg_rating: number | null
+          branches_count: number | null
+          category: string | null
+          created_at: string | null
+          created_by_admin: boolean | null
+          id: string | null
+          location: string | null
+          name: string | null
+          phone: string | null
+          reviews_count: number | null
+          status: string | null
+          verified: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

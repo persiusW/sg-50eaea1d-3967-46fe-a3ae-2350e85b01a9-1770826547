@@ -47,6 +47,8 @@ const AdminDashboardPage: NextPage = () => {
   const [underReviewReviews, setUnderReviewReviews] = useState<number | null>(null);
   const [confirmedScamBusinesses, setConfirmedScamBusinesses] = useState<number | null>(null);
   const [confirmedScamNumbers, setConfirmedScamNumbers] = useState<number | null>(null);
+  const [verifiedBusinesses, setVerifiedBusinesses] = useState<number | null>(null);
+  const [highRatedBusinesses, setHighRatedBusinesses] = useState<number | null>(null);
 
   const [categoryStats, setCategoryStats] = useState<CategoryStat[] | null>(null);
   const [reviewerStats, setReviewerStats] = useState<ReviewerStat[] | null>(null);
@@ -74,28 +76,45 @@ const AdminDashboardPage: NextPage = () => {
       const totalBusinessesPromise = supabase
         .from("businesses")
         .select("id", { count: "exact", head: true });
+
       const totalReviewsPromise = supabase
         .from("reviews")
         .select("id", { count: "exact", head: true });
+
       const totalFlaggedPromise = supabase
         .from("flagged_numbers")
         .select("id", { count: "exact", head: true });
+
       const underReviewBusinessesPromise = supabase
         .from("businesses")
         .select("id", { count: "exact", head: true })
         .eq("status", "UNDER_REVIEW");
+
       const underReviewReviewsPromise = supabase
         .from("reviews")
         .select("id", { count: "exact", head: true })
         .eq("status", "UNDER_REVIEW");
+
       const confirmedScamBusinessesPromise = supabase
         .from("businesses")
         .select("id", { count: "exact", head: true })
         .eq("status", "SCAM");
+
       const confirmedScamNumbersPromise = supabase
         .from("flagged_numbers")
         .select("id", { count: "exact", head: true })
         .eq("status", "VERIFIED");
+
+      const verifiedBusinessesPromise = supabase
+        .from("businesses")
+        .select("id", { count: "exact", head: true })
+        .eq("verified", true);
+
+      const highRatedBusinessesPromise = supabase
+        .from("businesses_with_ratings")
+        .select("id", { count: "exact", head: true })
+        .gte("avg_rating", 4.0)
+        .gt("reviews_count", 0);
 
       const categoryStatsPromise = supabase
         .from("businesses")
@@ -132,6 +151,8 @@ const AdminDashboardPage: NextPage = () => {
         underReviewReviewsRes,
         confirmedScamBusinessesRes,
         confirmedScamNumbersRes,
+        verifiedBusinessesRes,
+        highRatedBusinessesRes,
         categoryStatsRes,
         reviewerStatsRes,
         recentReviewsRes,
@@ -144,6 +165,8 @@ const AdminDashboardPage: NextPage = () => {
         underReviewReviewsPromise,
         confirmedScamBusinessesPromise,
         confirmedScamNumbersPromise,
+        verifiedBusinessesPromise,
+        highRatedBusinessesPromise,
         categoryStatsPromise,
         reviewerStatsPromise,
         recentReviewsPromise,
@@ -164,6 +187,12 @@ const AdminDashboardPage: NextPage = () => {
       );
       setConfirmedScamNumbers(
         confirmedScamNumbersRes.error ? null : confirmedScamNumbersRes.count ?? null
+      );
+      setVerifiedBusinesses(
+        verifiedBusinessesRes.error ? null : verifiedBusinessesRes.count ?? null
+      );
+      setHighRatedBusinesses(
+        highRatedBusinessesRes.error ? null : highRatedBusinessesRes.count ?? null
       );
 
       setCategoryStats(
@@ -310,7 +339,7 @@ const AdminDashboardPage: NextPage = () => {
             </p>
           </header>
 
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border border-border bg-card p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Total businesses
@@ -362,6 +391,22 @@ const AdminDashboardPage: NextPage = () => {
                 <span className="ml-2 text-muted-foreground">
                   • Numbers (Confirmed Scam): {confirmedScamNumbers ?? "—"}
                 </span>
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Verified businesses
+              </p>
+              <p className="mt-1 text-2xl font-semibold">
+                {verifiedBusinesses ?? "—"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Businesses rated 4.0+ (min 1 review)
+              </p>
+              <p className="mt-1 text-2xl font-semibold">
+                {highRatedBusinesses ?? "—"}
               </p>
             </div>
           </section>
