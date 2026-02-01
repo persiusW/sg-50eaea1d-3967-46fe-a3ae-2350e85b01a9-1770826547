@@ -13,7 +13,8 @@ type BusinessStatus =
   | "UNDER_REVIEW"
   | "MULTIPLE_REPORTS"
   | "PATTERN_MATCH_SCAM"
-  | "VERIFIED";
+  | "VERIFIED"
+  | "SCAM";
 
 interface Business {
   id: string;
@@ -49,15 +50,19 @@ const statusLabel: Record<BusinessStatus, string> = {
   MULTIPLE_REPORTS: "Multiple Independent Reports",
   PATTERN_MATCH_SCAM: "Pattern Match: Known Scam Method",
   VERIFIED: "Verified",
+  SCAM: "Confirmed Scam",
 };
 
 const statusBadgeClass: Record<BusinessStatus, string> = {
-  UNDER_REVIEW: "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
+  UNDER_REVIEW:
+    "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100",
   MULTIPLE_REPORTS:
     "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/40",
   PATTERN_MATCH_SCAM:
     "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40",
   VERIFIED: "bg-emerald-600 text-emerald-50",
+  SCAM:
+    "bg-red-600 text-red-50 border border-red-700 dark:bg-red-900 dark:text-red-100",
 };
 
 const BusinessProfilePage: NextPage = () => {
@@ -235,19 +240,24 @@ const BusinessProfilePage: NextPage = () => {
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      {business.status && (
-                        <Badge
-                          className={
-                            "border " +
-                            (statusBadgeClass[
-                              business.status
-                            ] || "bg-muted text-foreground")
-                          }
-                        >
-                          {statusLabel[business.status] ?? "Status"}
+                      {business.status === "SCAM" && (
+                        <Badge className="border bg-red-600 text-red-50 dark:bg-red-900 dark:text-red-100">
+                          ⛔ Confirmed Scam
                         </Badge>
                       )}
-                      {business.verified && (
+                      {business.status &&
+                        business.status !== "SCAM" && (
+                          <Badge
+                            className={
+                              "border " +
+                              (statusBadgeClass[business.status] ||
+                                "bg-muted text-foreground")
+                            }
+                          >
+                            {statusLabel[business.status] ?? "Status"}
+                          </Badge>
+                        )}
+                      {!business.status && business.verified && (
                         <Badge className="bg-emerald-600 text-emerald-50">
                           Verified
                         </Badge>

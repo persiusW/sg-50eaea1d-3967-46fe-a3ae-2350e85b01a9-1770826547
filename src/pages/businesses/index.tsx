@@ -9,7 +9,8 @@ type BusinessStatus =
   | "UNDER_REVIEW"
   | "MULTIPLE_REPORTS"
   | "PATTERN_MATCH_SCAM"
-  | "VERIFIED";
+  | "VERIFIED"
+  | "SCAM";
 
 interface BusinessListItem {
   id: string;
@@ -25,6 +26,7 @@ const statusLabel: Record<BusinessStatus, string> = {
   MULTIPLE_REPORTS: "Multiple Independent Reports",
   PATTERN_MATCH_SCAM: "Pattern Match: Known Scam Method",
   VERIFIED: "Verified",
+  SCAM: "Confirmed Scam",
 };
 
 const statusBadgeClass: Record<BusinessStatus, string> = {
@@ -35,6 +37,8 @@ const statusBadgeClass: Record<BusinessStatus, string> = {
   PATTERN_MATCH_SCAM:
     "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/40",
   VERIFIED: "bg-emerald-600 text-emerald-50",
+  SCAM:
+    "bg-red-600 text-red-50 border border-red-700 dark:bg-red-900 dark:text-red-100",
 };
 
 export default function BusinessesPage() {
@@ -176,11 +180,6 @@ export default function BusinessesPage() {
                               >
                                 {biz.name}
                               </Link>
-                              {biz.verified && (
-                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700/60">
-                                  Verified
-                                </span>
-                              )}
                             </div>
                             <div className="mt-0.5 text-[11px] text-muted-foreground">
                               {biz.phone}
@@ -196,7 +195,13 @@ export default function BusinessesPage() {
                                   statusBadgeClass[biz.status]
                                 }`}
                               >
-                                {statusLabel[biz.status] ?? biz.status}
+                                {biz.status === "SCAM"
+                                  ? "⛔ Confirmed Scam"
+                                  : statusLabel[biz.status] ?? biz.status}
+                              </span>
+                            ) : biz.verified ? (
+                              <span className="inline-flex items-center rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-medium text-emerald-50">
+                                Verified
                               </span>
                             ) : (
                               <span className="text-[11px] text-muted-foreground">

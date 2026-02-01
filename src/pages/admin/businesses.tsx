@@ -20,7 +20,8 @@ type BusinessStatus =
   | "UNDER_REVIEW"
   | "MULTIPLE_REPORTS"
   | "PATTERN_MATCH_SCAM"
-  | "VERIFIED";
+  | "VERIFIED"
+  | "SCAM";
 
 interface Business {
   id: string;
@@ -42,6 +43,7 @@ interface FormState {
   branches_count: string;
   category: string;
   status: BusinessStatus | "__NONE__";
+  verified: boolean;
 }
 
 const statusLabel: Record<BusinessStatus, string> = {
@@ -49,6 +51,7 @@ const statusLabel: Record<BusinessStatus, string> = {
   MULTIPLE_REPORTS: "Multiple Independent Reports",
   PATTERN_MATCH_SCAM: "Pattern Match: Known Scam Method",
   VERIFIED: "Verified",
+  SCAM: "Confirmed Scam",
 };
 
 const AdminBusinessesPage: NextPage = () => {
@@ -63,6 +66,7 @@ const AdminBusinessesPage: NextPage = () => {
     branches_count: "",
     category: "",
     status: "__NONE__",
+    verified: true,
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -108,6 +112,7 @@ const AdminBusinessesPage: NextPage = () => {
       branches_count: "",
       category: "",
       status: "__NONE__",
+      verified: true,
     });
     setEditingId(null);
     setFormError(null);
@@ -124,17 +129,16 @@ const AdminBusinessesPage: NextPage = () => {
       name: biz.name,
       phone: biz.phone,
       location: biz.location ?? "",
-      branches_count: biz.branches_count
-        ? String(biz.branches_count)
-        : "",
+      branches_count: biz.branches_count ? String(biz.branches_count) : "",
       category: biz.category,
       status: biz.status ?? "__NONE__",
+      verified: biz.verified,
     });
     setFormError(null);
   };
 
-  const handleFormChange = (field: keyof FormState, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+  const handleFormChange = (field: keyof FormState, value: string | boolean) => {
+    setForm((prev) => ({ ...prev, [field]: value } as FormState));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -148,6 +152,7 @@ const AdminBusinessesPage: NextPage = () => {
     const branchesStr = form.branches_count.trim();
     const category = form.category.trim();
     const status = form.status;
+    const verified = form.verified;
 
     if (!name || !phone || !category) {
       setFormError("Name, phone, and category are required.");
@@ -166,7 +171,7 @@ const AdminBusinessesPage: NextPage = () => {
         : branchesCountNumber,
       category,
       status: status === "__NONE__" ? null : status,
-      verified: true,
+      verified,
       created_by_admin: true,
     };
 
@@ -378,8 +383,29 @@ const AdminBusinessesPage: NextPage = () => {
                         <SelectItem value="VERIFIED">
                           Verified
                         </SelectItem>
+                        <SelectItem value="SCAM">
+                          Confirmed Scam
+                        </SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="verified"
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border"
+                        checked={form.verified}
+                        onChange={(e) =>
+                          handleFormChange("verified", e.target.checked)
+                        }
+                      />
+                      <Label htmlFor="verified">Verified</Label>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Admin-only flag. New businesses default to verified but can be turned off if needed.
+                    </p>
                   </div>
                 </div>
 
