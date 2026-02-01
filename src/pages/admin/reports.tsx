@@ -53,6 +53,9 @@ const AdminReportsPage: NextPage = () => {
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>("");
   const [conversionSavingId, setConversionSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -89,6 +92,7 @@ const AdminReportsPage: NextPage = () => {
       setReports([]);
       setHasMore(false);
     }
+    setSelectedIds([]);
     setLoading(false);
   };
 
@@ -225,6 +229,42 @@ const AdminReportsPage: NextPage = () => {
     setConversionSavingId(null);
   };
 
+  const handleBulkUpdateReportStatus = async (nextStatus: ReportStatus) => {
+    if (selectedIds.length === 0) return;
+
+    setBulkError(null);
+    setBulkSaving(true);
+
+    const prevById = new Map<string, ReportStatus>(
+      reports.map((r) => [r.id, r.status])
+    );
+
+    setReports((prev) =>
+      prev.map((r) =>
+        selectedIds.includes(r.id) ? { ...r, status: nextStatus } : r
+      )
+    );
+
+    const { error } = await supabase
+      .from("scam_reports")
+      .update({ status: nextStatus })
+      .in("id", selectedIds);
+
+    if (error) {
+      setBulkError("Could not update selected reports. Changes reverted.");
+      setReports((prev) =>
+        prev.map((r) => ({
+          ...r,
+          status: prevById.get(r.id) ?? r.status,
+        }))
+      );
+    } else {
+      setSelectedIds([]);
+    }
+
+    setBulkSaving(false);
+  };
+
   if (checkingAuth) {
     return (
       <>
@@ -240,6 +280,13 @@ const AdminReportsPage: NextPage = () => {
       </>
     );
   }
+
+  const allVisibleIds = reports.map((r) => r.id);
+  const allSelectedOnPage =
+    allVisibleIds.length > 0 &&
+    allVisibleIds.every((id) => selectedIds.includes(id));
+  const someSelectedOnPage =
+    allVisibleIds.some((id) => selectedIds.includes(id)) && !allSelectedOnPage;
 
   return (
     <>
@@ -269,10 +316,74 @@ const AdminReportsPage: NextPage = () => {
               </p>
             )}
 
+            {selectedIds.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-[11px]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">
+                    Selected: {selectedIds.length}
+                  </span>
+                  {bulkError && (
+                    <span className="text-destructive">{bulkError}</span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() => void handleBulkUpdateReportStatus("REVIEWING")}
+                    className="rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800 disabled:opacity-60 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
+                  >
+                    Set REVIEWING
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() => void handleBulkUpdateReportStatus("RESOLVED")}
+                    className="rounded-full border border-emerald-500 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800 disabled:opacity-60 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100"
+                  >
+                    Set RESOLVED
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() => void handleBulkUpdateReportStatus("REJECTED")}
+                    className="rounded-full border border-red-400 bg-red-50 px-2 py-0.5 text-[10px] text-red-700 disabled:opacity-60 dark:border-red-500 dark:bg-red-950/40 dark:text-red-200"
+                  >
+                    Set REJECTED
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() => setSelectedIds([])}
+                    className="ml-auto rounded border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground hover:bg-accent"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="overflow-x-auto rounded-lg border border-border bg-card">
               <table className="min-w-full text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <th className="px-2 py-2">
+                      <input
+                        type="checkbox"
+                        className="h-3 w-3 accent-emerald-600"
+                        checked={allSelectedOnPage}
+                        ref={(input) => {
+                          if (input) {
+                            input.indeterminate = someSelectedOnPage;
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(allVisibleIds);
+                          } else {
+                            setSelectedIds([]);
+                          }
+                        }}
+                      />
+                    </th>
                     <th className="px-2 py-2 font-medium">Type</th>
                     <th className="px-2 py-2 font-medium">Phone</th>
                     <th className="px-2 py-2 font-medium">Platform</th>
@@ -286,7 +397,7 @@ const AdminReportsPage: NextPage = () => {
                   {reports.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-2 py-4 text-center text-xs text-muted-foreground"
                       >
                         {loading ? "Loading…" : "No reports yet."}
@@ -296,6 +407,20 @@ const AdminReportsPage: NextPage = () => {
                     reports.map((report) => (
                       <React.Fragment key={report.id}>
                         <tr className="border-b border-border/60 align-top">
+                          <td className="px-2 py-2 align-top">
+                            <input
+                              type="checkbox"
+                              className="h-3 w-3 accent-emerald-600"
+                              checked={selectedIds.includes(report.id)}
+                              onChange={(e) => {
+                                setSelectedIds((prev) =>
+                                  e.target.checked
+                                    ? [...prev, report.id]
+                                    : prev.filter((id) => id !== report.id),
+                                );
+                              }}
+                            />
+                          </td>
                           <td className="px-2 py-2 text-[11px]">
                             {report.report_type}
                           </td>
@@ -364,7 +489,7 @@ const AdminReportsPage: NextPage = () => {
                         </tr>
                         {expandedId === report.id && (
                           <tr className="border-b border-border/60 bg-background/60">
-                            <td colSpan={7} className="px-3 py-3 text-[11px]">
+                            <td colSpan={8} className="px-3 py-3 text-[11px]">
                               <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
                                 <div className="space-y-2">
                                   <p className="font-medium text-foreground">

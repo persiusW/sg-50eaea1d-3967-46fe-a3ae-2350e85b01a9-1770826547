@@ -23,6 +23,8 @@ interface ReviewErrorState {
   [id: string]: string | null;
 }
 
+type ReviewStatus = "" | "UNDER_REVIEW" | "VERIFIED" | "SPAM";
+
 const truncate = (text: string, max: number): string => {
   if (text.length <= max) return text;
   return text.slice(0, max - 1) + "…";
@@ -50,6 +52,9 @@ const AdminReviewsPage: NextPage = () => {
   const [hasMore, setHasMore] = useState(false);
   const [rowErrors, setRowErrors] = useState<ReviewErrorState>({});
   const [savingIds, setSavingIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -101,6 +106,7 @@ const AdminReviewsPage: NextPage = () => {
       }
 
       setLoading(false);
+      setSelectedIds([]);
     };
 
     void fetchReviews();
@@ -175,6 +181,44 @@ const AdminReviewsPage: NextPage = () => {
     setSavingIds((prev) => prev.filter((id) => id !== reviewId));
   };
 
+  const handleBulkUpdateReviewStatus = async (nextStatus: ReviewStatus) => {
+    if (selectedIds.length === 0) return;
+
+    setBulkError(null);
+    setBulkSaving(true);
+
+    const prevById = new Map<string, string | null>(
+      reviews.map((r) => [r.id, r.status])
+    );
+
+    const nextValue = nextStatus === "" ? null : nextStatus;
+
+    setReviews((prev) =>
+      prev.map((r) =>
+        selectedIds.includes(r.id) ? { ...r, status: nextValue } : r
+      )
+    );
+
+    const { error } = await supabase
+      .from("reviews")
+      .update({ status: nextValue })
+      .in("id", selectedIds);
+
+    if (error) {
+      setBulkError("Could not update selected reviews. Changes reverted.");
+      setReviews((prev) =>
+        prev.map((r) => ({
+          ...r,
+          status: prevById.get(r.id) ?? r.status,
+        }))
+      );
+    } else {
+      setSelectedIds([]);
+    }
+
+    setBulkSaving(false);
+  };
+
   const refreshPage = async (pageToLoad: number) => {
     const from = (pageToLoad - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
@@ -234,11 +278,19 @@ const AdminReviewsPage: NextPage = () => {
     if (!search.trim()) return true;
     const q = search.trim().toLowerCase();
     return (
-      rev.business_name.toLowerCase().includes(q) ||
+      (rev.business_name || "").toLowerCase().includes(q) ||
       (rev.reviewer_name || "").toLowerCase().includes(q) ||
-      rev.reviewer_phone.toLowerCase().includes(q)
+      (rev.reviewer_phone || "").toLowerCase().includes(q)
     );
   });
+
+  const allVisibleIds = filteredReviews.map((r) => r.id);
+  const allSelectedOnPage =
+    allVisibleIds.length > 0 &&
+    allVisibleIds.every((id) => selectedIds.includes(id));
+  const someSelectedOnPage =
+    allVisibleIds.some((id) => selectedIds.includes(id)) &&
+    !allSelectedOnPage;
 
   if (checkingAuth) {
     return (
@@ -285,11 +337,79 @@ const AdminReviewsPage: NextPage = () => {
               Moderate public reviews. You can update status or delete any review.
             </p>
 
+            {selectedIds.length > 0 && (
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-[11px]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">
+                    Selected: {selectedIds.length}
+                  </span>
+                  {bulkError && (
+                    <span className="text-destructive">{bulkError}</span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() =>
+                      void handleBulkUpdateReviewStatus("UNDER_REVIEW")
+                    }
+                    className="rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800 disabled:opacity-60 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
+                  >
+                    Set UNDER_REVIEW
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() =>
+                      void handleBulkUpdateReviewStatus("VERIFIED")
+                    }
+                    className="rounded-full border border-emerald-500 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800 disabled:opacity-60 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100"
+                  >
+                    Set VERIFIED
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() => void handleBulkUpdateReviewStatus("SPAM")}
+                    className="rounded-full border border-red-400 bg-red-50 px-2 py-0.5 text-[10px] text-red-700 disabled:opacity-60 dark:border-red-500 dark:bg-red-950/40 dark:text-red-200"
+                  >
+                    Set SPAM
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bulkSaving}
+                    onClick={() => setSelectedIds([])}
+                    className="ml-auto rounded border border-border bg-background px-2 py-0.5 text-[10px] text-muted-foreground hover:bg-accent"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Desktop/table view */}
             <div className="hidden overflow-x-auto sm:block">
               <table className="min-w-full text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <th className="px-2 py-2">
+                      <input
+                        type="checkbox"
+                        className="h-3 w-3 accent-emerald-600"
+                        checked={allSelectedOnPage}
+                        ref={(input) => {
+                          if (input) {
+                            input.indeterminate = someSelectedOnPage;
+                          }
+                        }}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(allVisibleIds);
+                          } else {
+                            setSelectedIds([]);
+                          }
+                        }}
+                      />
+                    </th>
                     <th className="px-2 py-2 font-medium">Business</th>
                     <th className="px-2 py-2 font-medium">Reviewer</th>
                     <th className="px-2 py-2 font-medium">Rating</th>
@@ -302,7 +422,7 @@ const AdminReviewsPage: NextPage = () => {
                   {reviews.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-2 py-4 text-center text-xs text-muted-foreground"
                       >
                         No reviews yet.
@@ -314,6 +434,20 @@ const AdminReviewsPage: NextPage = () => {
                         key={review.id}
                         className="border-b border-border/60 align-top text-xs last:border-b-0 hover:bg-muted/40"
                       >
+                        <td className="px-2 py-2 align-top">
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3 accent-emerald-600"
+                            checked={selectedIds.includes(review.id)}
+                            onChange={(e) => {
+                              setSelectedIds((prev) =>
+                                e.target.checked
+                                  ? [...prev, review.id]
+                                  : prev.filter((id) => id !== review.id)
+                              );
+                            }}
+                          />
+                        </td>
                         <td className="px-2 py-2 text-[11px]">
                           {review.business_name || "—"}
                         </td>
@@ -429,25 +563,41 @@ const AdminReviewsPage: NextPage = () => {
                     key={review.id}
                     className="rounded-md border border-border bg-background p-3 text-xs"
                   >
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium">
-                        {review.business_name || "—"}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium">
+                          {review.business_name || "—"}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          <span className="font-medium">Reviewer:</span>{" "}
+                          {review.reviewer_phone || "—"}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          <span className="font-medium">Name:</span>{" "}
+                          {review.reviewer_name || "Anonymous"}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          <span className="font-medium">Rating:</span>{" "}
+                          {review.rating}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">
+                          <span className="font-medium">Review:</span>{" "}
+                          {review.body}
+                        </div>
                       </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        <span className="font-medium">Reviewer:</span>{" "}
-                        {review.reviewer_phone || "—"}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        <span className="font-medium">Name:</span>{" "}
-                        {review.reviewer_name || "Anonymous"}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        <span className="font-medium">Rating:</span>{" "}
-                        {review.rating}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        <span className="font-medium">Review:</span>{" "}
-                        {review.body}
+                      <div className="pt-1">
+                        <input
+                          type="checkbox"
+                          className="h-3 w-3 accent-emerald-600"
+                          checked={selectedIds.includes(review.id)}
+                          onChange={(e) => {
+                            setSelectedIds((prev) =>
+                              e.target.checked
+                                ? [...prev, review.id]
+                                : prev.filter((id) => id !== review.id)
+                            );
+                          }}
+                        />
                       </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-2">
