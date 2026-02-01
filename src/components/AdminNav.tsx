@@ -1,61 +1,99 @@
-import React from "react";
+import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/router";
-import { Button } from "@/components/ui/button";
-import { authService } from "@/services/authService";
+import { supabase } from "@/integrations/supabase/client";
 
-interface NavLink {
-  href: string;
-  label: string;
-}
-
-const links: NavLink[] = [
-  { href: "/admin/businesses", label: "Businesses" },
-  { href: "/admin/reviews", label: "Reviews" },
-  { href: "/admin/flagged-numbers", label: "Flagged Numbers" },
-];
-
-export const AdminNav: React.FC = () => {
+export function AdminNav(): JSX.Element {
+  const [open, setOpen] = useState(false);
   const router = useRouter();
 
+  const closeMenu = () => setOpen(false);
+
   const handleSignOut = async () => {
-    await authService.signOut();
-    router.replace("/admin/login");
+    await supabase.auth.signOut();
+    await router.push("/admin/login");
   };
 
   return (
-    <nav className="mb-4 flex flex-col gap-2 border-b border-border pb-3 pt-1 text-sm sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-wrap items-center gap-2">
-        {links.map((link) => {
-          const isActive = router.pathname === link.href;
-          return (
-            <button
-              key={link.href}
-              type="button"
-              onClick={() => {
-                if (!isActive) {
-                  void router.push(link.href);
-                }
-              }}
-              className={`rounded px-2 py-1 text-xs sm:text-sm ${
-                isActive
-                  ? "font-semibold text-primary underline underline-offset-4"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {link.label}
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex justify-end">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleSignOut}
+    <header className="border-b bg-background">
+      <div className="mx-auto flex w-full max-w-screen-xl items-center gap-4 px-4 sm:px-6 lg:px-8 py-3">
+        <div className="shrink-0 text-sm font-semibold">
+          <Link href="/admin/businesses" className="whitespace-nowrap">
+            Transparent Turtle · Admin
+          </Link>
+        </div>
+        <nav className="hidden flex-1 justify-end gap-3 text-xs sm:flex sm:text-sm">
+          <Link
+            href="/admin/businesses"
+            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+          >
+            Businesses
+          </Link>
+          <Link
+            href="/admin/reviews"
+            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+          >
+            Reviews
+          </Link>
+          <Link
+            href="/admin/flagged-numbers"
+            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+          >
+            Flagged Numbers
+          </Link>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+          >
+            Sign out
+          </button>
+        </nav>
+        <button
+          type="button"
+          className="ml-auto inline-flex items-center rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground sm:hidden"
+          onClick={() => setOpen((prev) => !prev)}
         >
-          Sign out
-        </Button>
+          Menu
+        </button>
       </div>
-    </nav>
+      {open && (
+        <div className="border-t border-border bg-background px-4 pb-3 pt-2 text-sm sm:hidden">
+          <nav className="flex flex-col gap-2">
+            <Link
+              href="/admin/businesses"
+              onClick={closeMenu}
+              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+            >
+              Businesses
+            </Link>
+            <Link
+              href="/admin/reviews"
+              onClick={closeMenu}
+              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+            >
+              Reviews
+            </Link>
+            <Link
+              href="/admin/flagged-numbers"
+              onClick={closeMenu}
+              className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+            >
+              Flagged Numbers
+            </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                closeMenu();
+                await handleSignOut();
+              }}
+              className="text-left text-muted-foreground hover:text-foreground"
+            >
+              Sign out
+            </button>
+          </nav>
+        </div>
+      )}
+    </header>
   );
-};
+}

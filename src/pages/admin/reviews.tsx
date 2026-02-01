@@ -237,141 +237,86 @@ const AdminReviewsPage: NextPage = () => {
             </div>
           </header>
 
-          <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium">All reviews</p>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                <div className="relative w-full sm:w-72">
-                  <input
-                    type="search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search by business, reviewer name, or phone…"
-                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-                  />
-                </div>
-                {search.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="self-start text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    Clear
-                  </button>
-                )}
-                {loading && (
-                  <p className="text-xs text-muted-foreground">Loading…</p>
-                )}
-              </div>
-            </div>
+          <section className="space-y-4">
+            <header className="flex items-center justify-between gap-3">
+              <h1 className="text-xl font-semibold tracking-tight">Reviews</h1>
+            </header>
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse text-xs sm:text-sm">
+            <p className="text-sm text-muted-foreground">
+              Moderate public reviews. You can update status or delete any review.
+            </p>
+
+            {/* Desktop/table view */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="min-w-full text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 pr-3">Business</th>
-                    <th className="py-2 px-3">Reviewer phone</th>
-                    <th className="py-2 px-3">Reviewer name</th>
-                    <th className="py-2 px-3">Rating</th>
-                    <th className="py-2 px-3">Review</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 px-3 text-right">Created at</th>
-                    <th className="py-2 pl-3 text-right">Actions</th>
+                    <th className="px-2 py-2 font-medium">Business</th>
+                    <th className="px-2 py-2 font-medium">Reviewer</th>
+                    <th className="px-2 py-2 font-medium">Rating</th>
+                    <th className="px-2 py-2 font-medium">Review</th>
+                    <th className="px-2 py-2 font-medium">Status</th>
+                    <th className="px-2 py-2 font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredReviews.length === 0 ? (
+                  {reviews.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={8}
-                        className="py-4 text-center text-xs text-muted-foreground"
+                        colSpan={6}
+                        className="px-2 py-4 text-center text-xs text-muted-foreground"
                       >
-                        {search.trim()
-                          ? "No reviews match this search."
-                          : "No reviews yet."}
+                        No reviews yet.
                       </td>
                     </tr>
                   ) : (
-                    filteredReviews.map((rev) => (
+                    reviews.map((review) => (
                       <tr
-                        key={rev.id}
-                        className="border-b border-border/60 align-top"
+                        key={review.id}
+                        className="border-b border-border/60 align-top text-xs last:border-b-0 hover:bg-muted/40"
                       >
-                        <td className="py-2 pr-3 font-medium">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleFilterByBusiness(rev.business_name)
-                            }
-                            className="text-left text-primary hover:underline"
-                          >
-                            {rev.business_name}
-                          </button>
+                        <td className="px-2 py-2 text-[11px]">
+                          {review.business_name || "—"}
                         </td>
-                        <td className="py-2 px-3 whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleFilterByPhone(rev.reviewer_phone)
-                            }
-                            className="text-primary hover:underline"
-                          >
-                            {rev.reviewer_phone}
-                          </button>
+                        <td className="px-2 py-2 text-[11px] text-muted-foreground">
+                          <div>{review.reviewer_phone || "—"}</div>
+                          <div className="text-[10px]">
+                            {review.reviewer_name || "Anonymous"}
+                          </div>
                         </td>
-                        <td className="py-2 px-3 whitespace-nowrap">
-                          {rev.reviewer_name && rev.reviewer_name.trim()
-                            ? rev.reviewer_name
-                            : "—"}
+                        <td className="px-2 py-2 text-[11px]">
+                          {review.rating}
                         </td>
-                        <td className="py-2 px-3 whitespace-nowrap">
-                          {rev.rating}/5
+                        <td className="px-2 py-2 text-[11px] text-muted-foreground">
+                          {review.body}
                         </td>
-                        <td className="py-2 px-3">
-                          <span className="block max-w-xs text-xs text-muted-foreground">
-                            {truncate(rev.body, 120)}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 whitespace-nowrap align-middle">
+                        <td className="px-2 py-2 text-[11px]">
                           <select
-                            className="mt-0.5 rounded-md border border-border bg-background px-2 py-1 text-[11px] shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-60"
-                            value={rev.status ?? ""}
+                            className="w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                            value={review.status || ""}
                             onChange={(e) =>
-                              handleStatusChange(rev, e.target.value)
+                              handleStatusChange(review, e.target.value)
                             }
-                            disabled={savingId === rev.id}
                           >
-                            {REVIEW_STATUS_OPTIONS.map((opt) => (
-                              <option
-                                key={opt.value || "none"}
-                                value={opt.value}
-                              >
-                                {opt.label}
+                            {REVIEW_STATUS_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
                               </option>
                             ))}
                           </select>
-                          {savingId === rev.id && (
-                            <p className="mt-0.5 text-[10px] text-muted-foreground">
-                              Saving…
-                            </p>
-                          )}
-                          {statusErrors[rev.id] && (
-                            <p className="mt-0.5 text-[10px] text-destructive-foreground">
-                              {statusErrors[rev.id]}
+                          {statusErrors[review.id] && (
+                            <p className="mt-1 text-[10px] text-destructive">
+                              {statusErrors[review.id]}
                             </p>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-right text-[11px] text-muted-foreground whitespace-nowrap">
-                          {new Date(rev.created_at).toLocaleString()}
-                        </td>
-                        <td className="py-2 pl-3 text-right whitespace-nowrap">
+                        <td className="px-2 py-2 text-[11px]">
                           <button
                             type="button"
-                            onClick={() => handleDelete(rev.id)}
-                            className="text-xs text-destructive-foreground hover:underline disabled:opacity-50"
-                            disabled={deletingId === rev.id}
+                            onClick={() => handleDelete(review.id)}
+                            className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/15"
                           >
-                            {deletingId === rev.id ? "Deleting…" : "Delete"}
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -381,38 +326,70 @@ const AdminReviewsPage: NextPage = () => {
               </table>
             </div>
 
-            <div className="mt-3 flex items-center justify-between gap-3 text-xs">
-              <button
-                type="button"
-                onClick={() =>
-                  setPage((prev) => (prev > 1 && !loading ? prev - 1 : prev))
-                }
-                disabled={page === 1 || loading}
-                className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <p className="text-[11px] text-muted-foreground">
-                Page {page}
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  setPage((prev) =>
-                    hasMore && !loading ? prev + 1 : prev
-                  )
-                }
-                disabled={!hasMore || loading}
-                className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
-              >
-                Next
-              </button>
+            {/* Mobile/card view */}
+            <div className="space-y-3 sm:hidden">
+              {reviews.length === 0 ? (
+                <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+                  No reviews yet.
+                </div>
+              ) : (
+                reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="rounded-md border border-border bg-background p-3 text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="text-sm font-medium">
+                        {review.business_name || "—"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        <span className="font-medium">Reviewer:</span>{" "}
+                        {review.reviewer_phone || "—"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        <span className="font-medium">Name:</span>{" "}
+                        {review.reviewer_name || "Anonymous"}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        <span className="font-medium">Rating:</span>{" "}
+                        {review.rating}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        <span className="font-medium">Review:</span>{" "}
+                        {review.body}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <select
+                        className="w-1/2 rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                        value={review.status || ""}
+                        onChange={(e) =>
+                          handleStatusChange(review, e.target.value)
+                        }
+                      >
+                        {REVIEW_STATUS_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(review.id)}
+                        className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/15"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    {statusErrors[review.id] && (
+                      <p className="mt-1 text-[10px] text-destructive">
+                        {statusErrors[review.id]}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
-
-            <p className="text-[11px] text-muted-foreground">
-              Deleting a review cannot be undone and will immediately remove it
-              from the public business page.
-            </p>
           </section>
         </div>
       </main>

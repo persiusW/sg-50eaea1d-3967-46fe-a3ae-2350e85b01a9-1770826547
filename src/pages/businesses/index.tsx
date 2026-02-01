@@ -3,7 +3,6 @@ import type { NextPage } from "next";
 import Link from "next/link";
 import { SEO } from "@/components/SEO";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { PublicLayout } from "@/components/PublicLayout";
 
@@ -96,55 +95,6 @@ const BusinessesPage: NextPage = () => {
     await fetchBusinesses(query, nextPage);
   };
 
-  const renderStatusCell = (biz: BusinessListItem) => {
-    const status = biz.status;
-
-    const shouldShowRating =
-      status === null || status === "VERIFIED";
-
-    if (!shouldShowRating && status) {
-      if (status === "SCAM") {
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadgeClass.SCAM}`}
-          >
-            ⛔ {statusLabel.SCAM}
-          </span>
-        );
-      }
-
-      if (
-        status === "UNDER_REVIEW" ||
-        status === "MULTIPLE_REPORTS" ||
-        status === "PATTERN_MATCH_SCAM"
-      ) {
-        return (
-          <span
-            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
-              statusBadgeClass[status]
-            }`}
-          >
-            {statusLabel[status]}
-          </span>
-        );
-      }
-    }
-
-    if (biz.reviews_count > 0) {
-      return (
-        <span className="text-[11px] text-muted-foreground">
-          ⭐ {biz.avg_rating.toFixed(1)} • {biz.reviews_count}
-        </span>
-      );
-    }
-
-    return (
-      <span className="text-[11px] text-muted-foreground">
-        No reviews yet
-      </span>
-    );
-  };
-
   return (
     <>
       <SEO
@@ -165,16 +115,33 @@ const BusinessesPage: NextPage = () => {
             </div>
             <Link
               href="/"
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
             >
               Back to home
             </Link>
           </header>
 
           <section className="space-y-4">
+            <header className="flex items-center justify-between gap-3">
+              <h1 className="text-xl font-semibold tracking-tight">
+                Search businesses
+              </h1>
+              <Link
+                href="/"
+                className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
+              >
+                Back to home
+              </Link>
+            </header>
+
+            <p className="text-sm text-muted-foreground">
+              Search by business name or phone number. Results are ordered by
+              relevance, then recent activity.
+            </p>
+
             <form
               onSubmit={handleSearch}
-              className="flex flex-col gap-3 sm:flex-row sm:items-center"
+              className="flex flex-col gap-2 rounded-md border border-border bg-card/40 p-3 sm:flex-row sm:items-center sm:gap-3"
             >
               <Input
                 type="search"
@@ -191,104 +158,158 @@ const BusinessesPage: NextPage = () => {
               </button>
             </form>
 
-            <div className="rounded-lg border border-border bg-card p-4 text-sm">
-              {loading && (
-                <p className="text-muted-foreground">Loading results…</p>
-              )}
+            {/* Desktop/table view */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="min-w-full text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <th className="px-2 py-2 font-medium">Business</th>
+                    <th className="px-2 py-2 font-medium">Phone</th>
+                    <th className="px-2 py-2 font-medium">Category</th>
+                    <th className="px-2 py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {businesses.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-2 py-4 text-center text-xs text-muted-foreground"
+                      >
+                        No businesses found. Try a different search or add a
+                        new business.
+                      </td>
+                    </tr>
+                  ) : (
+                    businesses.map((business) => (
+                      <tr
+                        key={business.id}
+                        className="border-b border-border/60 align-top text-xs last:border-b-0 hover:bg-muted/40"
+                      >
+                        <td className="px-2 py-2">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/businesses/${business.id}`}
+                                className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+                              >
+                                {business.name}
+                              </Link>
+                              {business.verified && (
+                                <span className="inline-flex items-center rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
+                                  Verified
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 align-top text-[11px] text-muted-foreground">
+                          {business.phone}
+                        </td>
+                        <td className="px-2 py-2 align-top text-[11px] text-muted-foreground">
+                          {business.category || "—"}
+                        </td>
+                        <td className="px-2 py-2 align-top">
+                          {business.status ? (
+                            <span
+                              className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                statusBadgeClass[business.status] ||
+                                "border border-border bg-muted/60 text-foreground"
+                              }`}
+                            >
+                              <span className="truncate">
+                                {statusLabel[business.status as Exclude<
+                                  BusinessStatus,
+                                  "VERIFIED"
+                                >] || business.status}
+                              </span>
+                            </span>
+                          ) : business.reviews_count > 0 ? (
+                            <span className="inline-flex items-center text-[11px] text-muted-foreground">
+                              <span className="mr-1 text-xs">⭐</span>
+                              {business.avg_rating.toFixed(1)} ·{" "}
+                              {business.reviews_count} review
+                              {business.reviews_count === 1 ? "" : "s"}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">
+                              No reviews yet
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-              {!loading && businesses.length === 0 && (
-                <p className="text-muted-foreground">
-                  No businesses found yet. Try a different search or{" "}
-                  <Link
-                    href="/businesses/add"
-                    className="underline underline-offset-4"
+            {/* Mobile/card view */}
+            <div className="space-y-3 sm:hidden">
+              {businesses.length === 0 ? (
+                <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+                  No businesses found. Try a different search or add a new
+                  business.
+                </div>
+              ) : (
+                businesses.map((business) => (
+                  <div
+                    key={business.id}
+                    className="rounded-md border border-border bg-background p-3 text-xs"
                   >
-                    add a new business
-                  </Link>
-                  .
-                </p>
-              )}
-
-              {!loading && businesses.length > 0 && (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-xs sm:text-sm">
-                      <thead>
-                        <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                          <th className="py-2 pr-3 font-medium">Business</th>
-                          <th className="py-2 px-3 font-medium">Category</th>
-                          <th className="py-2 px-3 font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {businesses.map((biz) => (
-                          <tr
-                            key={biz.id}
-                            className="border-b border-border/60 last:border-0"
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/businesses/${business.id}`}
+                            className="text-sm font-medium text-primary underline-offset-2 hover:underline"
                           >
-                            <td className="py-2 pr-3 align-middle">
-                              <div className="flex items-center gap-2">
-                                <Link
-                                  href={`/businesses/${biz.id}`}
-                                  className="text-sm font-medium hover:underline"
-                                >
-                                  {biz.name}
-                                </Link>
-                                {biz.verified && (
-                                  <Badge className="bg-emerald-600 text-emerald-50">
-                                    Verified
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="mt-0.5 text-[11px] text-muted-foreground">
-                                {biz.phone}
-                              </div>
-                            </td>
-                            <td className="py-2 px-3 align-middle">
-                              {biz.category}
-                            </td>
-                            <td className="py-2 px-3 align-middle">
-                              {renderStatusCell(biz)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            {business.name}
+                          </Link>
+                          {business.verified && (
+                            <span className="inline-flex items-center rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300 whitespace-nowrap">
+                              Verified
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {business.phone}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {business.category || "—"}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 text-right">
+                        {business.status ? (
+                          <span
+                            className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                              statusBadgeClass[business.status] ||
+                              "border border-border bg-muted/60 text-foreground"
+                            }`}
+                          >
+                            <span className="truncate">
+                              {statusLabel[business.status as Exclude<
+                                BusinessStatus,
+                                "VERIFIED"
+                              >] || business.status}
+                            </span>
+                          </span>
+                        ) : business.reviews_count > 0 ? (
+                          <span className="inline-flex items-center text-[11px] text-muted-foreground whitespace-nowrap">
+                            <span className="mr-1 text-xs">⭐</span>
+                            {business.avg_rating.toFixed(1)} ·{" "}
+                            {business.reviews_count} review
+                            {business.reviews_count === 1 ? "" : "s"}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                            No reviews yet
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="mt-4 flex items-center justify-between gap-3 text-xs">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const nextPage = Math.max(1, page - 1);
-                        if (nextPage !== page) {
-                          setPage(nextPage);
-                          await fetchBusinesses(query, nextPage);
-                        }
-                      }}
-                      disabled={page === 1}
-                      className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
-                    >
-                      Previous
-                    </button>
-                    <p className="text-[11px] text-muted-foreground">
-                      Page {page}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!hasMore) return;
-                        const nextPage = page + 1;
-                        setPage(nextPage);
-                        await fetchBusinesses(query, nextPage);
-                      }}
-                      disabled={!hasMore}
-                      className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
+                ))
               )}
             </div>
           </section>

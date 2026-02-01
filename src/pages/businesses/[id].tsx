@@ -248,7 +248,7 @@ const BusinessDetailPage: NextPage = () => {
             </div>
             <Link
               href="/businesses"
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
             >
               Back to search
             </Link>

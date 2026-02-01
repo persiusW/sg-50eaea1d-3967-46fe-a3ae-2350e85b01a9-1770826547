@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { NextPage } from "next";
 import { SEO } from "@/components/SEO";
-import { Input } from "@/components/ui/input";
 import { PublicLayout } from "@/components/PublicLayout";
 import { supabase } from "@/integrations/supabase/client";
 import Link from "next/link";
@@ -71,7 +70,6 @@ const FlaggedNumbersPage: NextPage = () => {
     const trimmed = currentQuery.trim();
     if (trimmed) {
       const lowered = trimmed.toLowerCase();
-      // client-side filter after page fetch to keep logic simple
       const { data } = await queryBuilder;
       if (data) {
         const mapped = data.map((row) => ({
@@ -82,10 +80,7 @@ const FlaggedNumbersPage: NextPage = () => {
         const filtered = mapped.filter((item) => {
           const phone = item.phone.toLowerCase();
           const name = (item.name_on_number ?? "").toLowerCase();
-          return (
-            phone.includes(lowered) ||
-            name.includes(lowered)
-          );
+          return phone.includes(lowered) || name.includes(lowered);
         });
 
         setItems(filtered);
@@ -122,7 +117,6 @@ const FlaggedNumbersPage: NextPage = () => {
     const value = e.target.value;
     setQuery(value);
     const trimmed = value.trim();
-    // Reset to page 1 on new search and fetch
     const nextPage = 1;
     setPage(nextPage);
     fetchPage(nextPage, trimmed);
@@ -164,7 +158,7 @@ const FlaggedNumbersPage: NextPage = () => {
             </div>
             <Link
               href="/"
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap"
             >
               Back to home
             </Link>
@@ -195,61 +189,104 @@ const FlaggedNumbersPage: NextPage = () => {
               )}
 
               {!loading && filtered.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-xs sm:text-sm">
-                    <thead>
-                      <tr className="border-b border-border/60 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                        <th className="py-2 pr-3 font-medium">Phone</th>
-                        <th className="py-2 px-3 font-medium">Name</th>
-                        <th className="py-2 px-3 font-medium">
-                          Connected scam/page
-                        </th>
-                        <th className="py-2 px-3 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filtered.map((item) => (
-                        <tr
+                <>
+                  {/* Desktop/table view */}
+                  <div className="hidden overflow-x-auto sm:block">
+                    <table className="min-w-full text-xs sm:text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
+                          <th className="px-2 py-2 font-medium">Phone</th>
+                          <th className="px-2 py-2 font-medium">Name on number</th>
+                          <th className="px-2 py-2 font-medium">Connected scam/page</th>
+                          <th className="px-2 py-2 font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={4}
+                              className="px-2 py-4 text-center text-xs text-muted-foreground"
+                            >
+                              No flagged numbers found.
+                            </td>
+                          </tr>
+                        ) : (
+                          items.map((item) => (
+                            <tr
+                              key={item.id}
+                              className="border-b border-border/60 align-top text-xs last:border-b-0 hover:bg-muted/40"
+                            >
+                              <td className="px-2 py-2 text-[11px] font-medium">
+                                {item.phone}
+                              </td>
+                              <td className="px-2 py-2 text-[11px] text-muted-foreground">
+                                {item.name_on_number || "—"}
+                              </td>
+                              <td className="px-2 py-2 text-[11px] text-muted-foreground">
+                                {item.connected_page || "—"}
+                              </td>
+                              <td className="px-2 py-2">
+                                <span
+                                  className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_CLASS[item.status]}`}
+                                >
+                                  {STATUS_PREFIX[item.status] ?? ""}
+                                  <span className="ml-0.5 whitespace-nowrap">
+                                    {item.status === "VERIFIED"
+                                      ? "Confirmed Scam"
+                                      : STATUS_LABEL[item.status]}
+                                  </span>
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile/card view */}
+                  <div className="space-y-3 sm:hidden">
+                    {items.length === 0 ? (
+                      <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+                        No flagged numbers found.
+                      </div>
+                    ) : (
+                      items.map((item) => (
+                        <div
                           key={item.id}
-                          className="border-b border-border/60 last:border-0"
+                          className="rounded-md border border-border bg-background p-3 text-xs"
                         >
-                          <td className="py-2 pr-3 align-middle">
-                            <div className="text-sm font-medium">
-                              {item.phone}
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-medium">{item.phone}</div>
+                              <p className="mt-1 text-[11px] text-muted-foreground">
+                                <span className="font-medium">Name:</span>{" "}
+                                {item.name_on_number || "—"}
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                <span className="font-medium">Connected scam/page:</span>{" "}
+                                {item.connected_page || "—"}
+                              </p>
                             </div>
-                          </td>
-                          <td className="py-2 px-3 align-middle">
-                            {item.name_on_number || (
-                              <span className="text-[11px] text-muted-foreground">
-                                —
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2 px-3 align-middle">
-                            {item.connected_page || (
-                              <span className="text-[11px] text-muted-foreground">
-                                —
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2 px-3 align-middle">
                             <span
-                              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${STATUS_CLASS[item.status]}`}
+                              className={`inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_CLASS[item.status]}`}
                             >
                               {STATUS_PREFIX[item.status] ?? ""}
-                              {item.status === "VERIFIED"
-                                ? "Confirmed Scam"
-                                : STATUS_LABEL[item.status]}
+                              <span className="ml-0.5 whitespace-nowrap">
+                                {item.status === "VERIFIED"
+                                  ? "Confirmed Scam"
+                                  : STATUS_LABEL[item.status]}
+                              </span>
                             </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
               )}
 
-              {/* Pagination controls */}
               <div className="mt-4 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
                 <button
                   type="button"
@@ -270,7 +307,6 @@ const FlaggedNumbersPage: NextPage = () => {
                 </button>
               </div>
 
-              {/* Existing legend (unchanged content) */}
               {!loading && (
                 <div className="mt-4 rounded-md border border-dashed border-border/60 bg-background/60 p-3 text-[11px] text-muted-foreground">
                   <p className="font-medium">Status Guide</p>
