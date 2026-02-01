@@ -10,6 +10,7 @@ export interface BusinessSummaryCardProps {
   status: string | null;
   avgRating: number | null;
   reviewsCount: number | null;
+  location?: string | null;
   className?: string;
 }
 
@@ -29,6 +30,7 @@ export function BusinessSummaryCard({
   status,
   avgRating,
   reviewsCount,
+  location,
   className,
 }: BusinessSummaryCardProps) {
   const normalizedStatus = status ?? "";
@@ -69,6 +71,11 @@ export function BusinessSummaryCard({
             {category && (
               <span className="truncate">
                 Category: <span className="font-medium text-foreground">{category}</span>
+              </span>
+            )}
+            {location && (
+              <span className="truncate">
+                Location: <span className="font-medium text-foreground">{location}</span>
               </span>
             )}
           </div>
