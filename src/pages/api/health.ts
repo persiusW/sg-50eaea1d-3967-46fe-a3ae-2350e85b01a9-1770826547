@@ -4,12 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 interface HealthOk {
   ok: true;
   supabaseUrlHost: string;
+  anonKeyPrefix: string;
   tablesReachable: boolean;
 }
 
 interface HealthError {
   ok: false;
   error: string;
+  supabaseUrlHost?: string;
+  anonKeyPrefix?: string;
 }
 
 type HealthResponse = HealthOk | HealthError;
@@ -19,8 +22,9 @@ export default async function handler(
   res: NextApiResponse<HealthResponse>
 ): Promise<void> {
   try {
-    // Show which Supabase project we are talking to (by hostname only)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
     let host = "";
     try {
       host = supabaseUrl ? new URL(supabaseUrl).host : "";
@@ -28,7 +32,8 @@ export default async function handler(
       host = "";
     }
 
-    // Prove DB connectivity and that the "businesses" table is reachable
+    const anonKeyPrefix = anonKey ? anonKey.slice(0, 6) : "";
+
     const { error } = await supabase
       .from("businesses")
       .select("id")
@@ -38,6 +43,8 @@ export default async function handler(
       res.status(500).json({
         ok: false,
         error: `Supabase query error: ${error.message}`,
+        supabaseUrlHost: host,
+        anonKeyPrefix,
       });
       return;
     }
@@ -45,14 +52,27 @@ export default async function handler(
     res.status(200).json({
       ok: true,
       supabaseUrlHost: host,
+      anonKeyPrefix,
       tablesReachable: true,
     });
   } catch (e) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    let host = "";
+    try {
+      host = supabaseUrl ? new URL(supabaseUrl).host : "";
+    } catch {
+      host = "";
+    }
+    const anonKeyPrefix = anonKey ? anonKey.slice(0, 6) : "";
+
     const message =
       e instanceof Error ? e.message : "Unknown error in /api/health";
     res.status(500).json({
       ok: false,
       error: message,
+      supabaseUrlHost: host,
+      anonKeyPrefix,
     });
   }
 }
