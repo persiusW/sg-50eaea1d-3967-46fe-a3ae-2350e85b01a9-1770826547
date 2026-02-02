@@ -321,10 +321,11 @@ const BusinessDetailPage: NextPage = () => {
   const title =
   business?.name ?? "Business profile – Transparent Turtle";
 
+  const rawStatus = business?.status as string | null | undefined;
   const effectiveStatus: BusinessStatus | null =
-  business && (business.status === "__NONE__" || business.status === null)
+  rawStatus === "__NONE__" || rawStatus == null
     ? null
-    : (business?.status ?? null);
+    : (rawStatus as BusinessStatus);
 
   return (
     <>
