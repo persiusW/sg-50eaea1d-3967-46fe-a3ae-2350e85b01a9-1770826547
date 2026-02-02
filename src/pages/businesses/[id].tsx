@@ -82,6 +82,9 @@ const BusinessDetailPage: NextPage = () => {
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [convertedReviewIds, setConvertedReviewIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [reviewMeta, setReviewMeta] = useState<Record<string, {earliestCreatedAt: string;count: number;}>>({});
   const [flaggedPhones, setFlaggedPhones] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -134,6 +137,25 @@ const BusinessDetailPage: NextPage = () => {
 
       if (!reviewError && reviewData) {
         setReviews(reviewData as Review[]);
+      }
+
+      // fetch converted_review_id set for this business
+      const { data: convertedData, error: convertedError } = await supabase
+        .from("scam_reports")
+        .select("converted_review_id")
+        .eq("business_id", id)
+        .not("converted_review_id", "is", null);
+
+      if (!convertedError && convertedData) {
+        const idSet = new Set<string>();
+        (convertedData as { converted_review_id: string | null }[]).forEach(
+          (row) => {
+            if (row.converted_review_id) {
+              idSet.add(row.converted_review_id);
+            }
+          }
+        );
+        setConvertedReviewIds(idSet);
       }
 
       setLoadingReviews(false);
@@ -641,9 +663,7 @@ Please keep contributions respectful, factual, and constructive.
                         const isFlagged =
                           !!phoneKey && flaggedPhones.has(phoneKey);
 
-                        const isFromReport =
-                          typeof review.body === "string" &&
-                          review.body.startsWith("Converted from report submission");
+                        const isFromReport = convertedReviewIds.has(review.id);
 
                         return (
                           <div

@@ -33,6 +33,23 @@ function normalizePhone(phone: string): string {
   return trimmed.replace(/[^\d+]/g, "");
 }
 
+const buildReviewInsert = (params: {
+  businessId: string;
+  reviewerName: string | null;
+  reviewerPhone: string | null;
+  body: string | null;
+}) => {
+  const { businessId, reviewerName, reviewerPhone, body } = params;
+
+  return {
+    business_id: businessId,
+    reviewer_name: reviewerName,
+    reviewer_phone: reviewerPhone,
+    rating: 1,
+    body,
+  };
+};
+
 const AdminReportsPage: NextPage = () => {
   const [reports, setReports] = useState<ScamReportRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -259,18 +276,22 @@ const AdminReportsPage: NextPage = () => {
         return;
       }
 
+      const description = (report.description ?? "").trim();
+      const convertedBody = description
+        ? `Converted from report submission — ${description}`
+        : "Converted from report submission";
+
       const reviewerPhoneRaw = report.submitter_phone?.trim() || "";
       const reviewerPhoneNormalized = reviewerPhoneRaw
         ? normalizePhone(reviewerPhoneRaw)
         : "";
 
-      const reviewPayload: Record<string, unknown> = {
-        business_id: businessId,
-        reviewer_name: report.submitter_name?.trim() || null,
-        reviewer_phone: reviewerPhoneNormalized || null,
-        rating: 3,
-        body: report.description?.trim() || null,
-      };
+      const reviewPayload = buildReviewInsert({
+        businessId,
+        reviewerName: report.submitter_name?.trim() || null,
+        reviewerPhone: reviewerPhoneNormalized || null,
+        body: convertedBody,
+      });
 
       const { data: insertedReview, error: insertReviewError } = await supabase
         .from("reviews")
@@ -281,6 +302,20 @@ const AdminReportsPage: NextPage = () => {
       if (insertReviewError || !insertedReview) {
         console.error("Failed to create review from report conversion", insertReviewError);
         setConvertError("Failed to create review from this report.");
+        setConvertLoading(false);
+        return;
+      }
+
+      const { error: linkError } = await supabase
+        .from("scam_reports")
+        .update({
+          converted_review_id: insertedReview.id,
+        })
+        .eq("id", report.id);
+
+      if (linkError) {
+        console.error("Failed to link review to scam report", linkError);
+        setConvertError("Review created, but failed to link to report.");
         setConvertLoading(false);
         return;
       }
