@@ -296,7 +296,7 @@ const BusinessesPage: NextPage = () => {
               </div>
             </div>
 
-            {/* Mobile list (unchanged layout) */}
+            {/* Mobile list */}
             <div className="space-y-2 sm:hidden">
               {loading && businesses.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
@@ -315,27 +315,22 @@ const BusinessesPage: NextPage = () => {
                   No businesses found. Try a different search.
                 </p>
               ) : (
-                businesses.map((biz) => (
-                  <Link
-                    key={biz.id}
-                    href={`/businesses/${biz.id}`}
-                    className="block rounded-lg border border-border bg-card p-3 text-xs"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">{biz.name}</p>
-                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                          {biz.phone} · {biz.category || "Uncategorized"}
-                        </p>
-                      </div>
-                      {biz.verified && (
-                        <span className="inline-flex items-center rounded-full border border-emerald-500/60 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
-                          Verified
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                ))
+                <div className="space-y-2">
+                  {businesses.map((biz) => (
+                    <BusinessSummaryCard
+                      key={biz.id}
+                      id={biz.id}
+                      name={biz.name}
+                      phone={biz.phone}
+                      category={biz.category}
+                      verified={biz.verified ?? false}
+                      status={biz.status ?? null}
+                      avgRating={biz.avg_rating ?? null}
+                      reviewsCount={biz.reviews_count ?? null}
+                      location={biz.location ?? null}
+                    />
+                  ))}
+                </div>
               )}
             </div>
 
