@@ -2,8 +2,10 @@
 module.exports = {
     siteUrl: 'https://www.transparentturtle.com',
     generateRobotsTxt: true,
-    sitemapSize: 7000,
+
+    // Keep Google away from admin & APIs
     exclude: ['/admin/*', '/api/*'],
+
     robotsTxtOptions: {
         policies: [
             { userAgent: '*', allow: '/', disallow: ['/admin', '/api'] },
