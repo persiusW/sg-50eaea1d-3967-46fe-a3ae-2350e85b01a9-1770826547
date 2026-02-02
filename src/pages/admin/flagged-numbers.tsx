@@ -77,6 +77,12 @@ interface FlaggedErrorState {
   [id: string]: string | null;
 }
 
+function normalizePhone(s: string): string {
+  const trimmed = s.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/[^\d+]/g, "");
+}
+
 export default function AdminFlaggedNumbersPage() {
   const [items, setItems] = useState<FlaggedNumber[]>([]);
   const [loading, setLoading] = useState(false);
@@ -216,8 +222,9 @@ export default function AdminFlaggedNumbersPage() {
     setSaving(true);
     setError(null);
 
+    const normalizedPhone = normalizePhone(form.phone);
     const payload = {
-      phone: form.phone.trim(),
+      phone: normalizedPhone,
       name_on_number: form.name_on_number.trim() || null,
       connected_page: form.connected_page.trim() || null,
       admin_note: form.admin_note.trim() || null,

@@ -48,6 +48,12 @@ const OTHER_VALUE = "__OTHER__";
 
 const PLATFORM_OPTIONS = ["Instagram", "WhatsApp", "Facebook", "TikTok", "Website"];
 
+function normalizePhone(s: string): string {
+  const trimmed = s.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/[^\d+]/g, "");
+}
+
 type BusinessStatus =
   | "UNDER_REVIEW"
   | "MULTIPLE_REPORTS"
@@ -298,7 +304,8 @@ const AdminBusinessesPage: NextPage = () => {
     setFormError(null);
 
     const name = form.name.trim();
-    const phone = form.phone.trim();
+    const phoneRaw = form.phone.trim();
+    const phone = normalizePhone(phoneRaw);
     const location = form.location.trim();
     const branchesStr = form.branchesCount.trim();
     const status = form.status;

@@ -27,6 +27,12 @@ interface ScamReportRow {
 
 const PAGE_SIZE = 20;
 
+function normalizePhone(phone: string): string {
+  const trimmed = phone.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/[^\d+]/g, "");
+}
+
 const AdminReportsPage: NextPage = () => {
   const [reports, setReports] = useState<ScamReportRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,6 +51,7 @@ const AdminReportsPage: NextPage = () => {
   const [flaggingId, setFlaggingId] = useState<string | null>(null);
   const [flaggingError, setFlaggingError] = useState<string | null>(null);
   const [flaggingSuccessId, setFlaggingSuccessId] = useState<string | null>(null);
+  const [reusedBusinessIds, setReusedBusinessIds] = useState<Record<string, boolean>>({});
 
   const fetchReports = async (pageIndex: number) => {
     setLoading(true);
@@ -81,7 +88,6 @@ const AdminReportsPage: NextPage = () => {
 
     if (error) {
       console.error("Error fetching scam reports", error);
-      // On error, do not feed error helpers into setReports; just clear to [] and reset count.
       setReports([]);
       setTotalCount(0);
       setLoading(false);
@@ -171,6 +177,7 @@ const AdminReportsPage: NextPage = () => {
 
     try {
       let businessId: string | null = null;
+      let reusedExisting = false;
 
       if (mode === "USE_EXISTING") {
         if (!selectedBusinessId) {
@@ -180,36 +187,67 @@ const AdminReportsPage: NextPage = () => {
         }
         businessId = selectedBusinessId;
       } else {
+        const rawPhone = report.phone ?? "";
+        const normalized = normalizePhone(rawPhone);
+
         const nameCandidate =
           report.connected_page?.trim() ||
           report.name_on_number?.trim() ||
           "Unnamed business from report";
-        const phoneCandidate = report.phone?.trim() || null;
 
-        const insertPayload: Record<string, unknown> = {
-          name: nameCandidate,
-          phone: phoneCandidate,
-          category: report.business_category?.trim() || null,
-          location: report.business_location?.trim() || null,
-          status: "UNDER_REVIEW",
-          created_by_admin: true,
-          verified: false,
-        };
+        if (normalized) {
+          const { data: existingBiz, error: existingBizError } = await supabase
+            .from("businesses")
+            .select("id")
+            .eq("phone", normalized)
+            .maybeSingle();
 
-        const { data: createdBusiness, error: createBusinessError } = await supabase
-          .from("businesses")
-          .insert(insertPayload)
-          .select("id")
-          .single();
+          if (existingBizError) {
+            console.error("Error checking existing business by phone during report conversion", existingBizError);
+            setConvertError("Failed to check existing business for this phone.");
+            setConvertLoading(false);
+            return;
+          }
 
-        if (createBusinessError || !createdBusiness) {
-          console.error("Failed to create business during report conversion", createBusinessError);
-          setConvertError("Failed to create business for this report.");
-          setConvertLoading(false);
-          return;
+          if (existingBiz) {
+            businessId = existingBiz.id as string;
+            reusedExisting = true;
+          }
         }
 
-        businessId = createdBusiness.id as string;
+        if (!businessId) {
+          const insertPayload: Record<string, unknown> = {
+            name: nameCandidate,
+            phone: normalized || null,
+            category: report.business_category?.trim() || null,
+            location: report.business_location?.trim() || null,
+            status: "UNDER_REVIEW",
+            created_by_admin: true,
+            verified: false,
+          };
+
+          const { data: createdBusiness, error: createBusinessError } = await supabase
+            .from("businesses")
+            .insert(insertPayload)
+            .select("id")
+            .single();
+
+          if (createBusinessError || !createdBusiness) {
+            console.error("Failed to create business during report conversion", createBusinessError);
+            setConvertError("Failed to create business for this report.");
+            setConvertLoading(false);
+            return;
+          }
+
+          businessId = createdBusiness.id as string;
+        }
+
+        if (reusedExisting) {
+          setReusedBusinessIds((prev) => ({
+            ...prev,
+            [report.id]: true,
+          }));
+        }
       }
 
       if (!businessId) {
@@ -218,13 +256,15 @@ const AdminReportsPage: NextPage = () => {
         return;
       }
 
+      const reviewerPhoneRaw = report.submitter_phone?.trim() || "";
+      const reviewerPhoneNormalized = reviewerPhoneRaw ? normalizePhone(reviewerPhoneRaw) : "";
+
       const reviewPayload: Record<string, unknown> = {
         business_id: businessId,
         reviewer_name: report.submitter_name?.trim() || null,
-        reviewer_phone: report.submitter_phone?.trim() || null,
+        reviewer_phone: reviewerPhoneNormalized || null,
         rating: 3,
         body: report.description?.trim() || null,
-        created_by_admin: true,
         verified: true,
       };
 
@@ -285,7 +325,7 @@ const AdminReportsPage: NextPage = () => {
     setFlaggingSuccessId(null);
     setFlaggingId(report.id);
 
-    const phone = report.phone.trim();
+    const phone = normalizePhone(report.phone);
     const nameOnNumber = report.name_on_number?.trim() || null;
     const connectedPage = report.connected_page?.trim() || null;
 
@@ -556,6 +596,11 @@ const AdminReportsPage: NextPage = () => {
                             {report.report_type === "BUSINESS" && (
                               <div className="space-y-3 text-xs">
                                 <h3 className="font-medium">Convert to review</h3>
+                                {reusedBusinessIds[report.id] && (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    Business already exists for this phone — linking to existing business.
+                                  </p>
+                                )}
                                 <div className="space-y-1">
                                   <label className="text-xs text-muted-foreground">
                                     Search existing businesses

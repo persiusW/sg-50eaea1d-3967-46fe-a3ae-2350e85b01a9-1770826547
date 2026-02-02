@@ -11,6 +11,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 type ReportType = "PHONE" | "BUSINESS";
 
+function normalizePhone(s: string): string {
+  const trimmed = s.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/[^\d+]/g, "");
+}
+
 const PLATFORM_OPTIONS = ["Instagram", "WhatsApp", "Facebook", "TikTok", "Website"];
 
 const BUSINESS_CATEGORY_OPTIONS: string[] = [
@@ -101,7 +107,8 @@ const ReportPage: NextPage = () => {
     setError(null);
     setSuccess(null);
 
-    const phone = form.phone.trim();
+    const phoneRaw = form.phone.trim();
+    const phone = normalizePhone(phoneRaw);
     if (!phone) {
       setError("Phone number is required.");
       setSubmitting(false);
@@ -128,6 +135,10 @@ const ReportPage: NextPage = () => {
         ? form.customCategory.trim() || null
         : form.businessCategory.trim() || null;
 
+    const submitterPhoneNormalized = form.submitterPhone
+      ? normalizePhone(form.submitterPhone)
+      : "";
+
     const { error: insertError } = await supabase.from("scam_reports").insert({
       report_type: form.reportType,
       phone,
@@ -137,7 +148,7 @@ const ReportPage: NextPage = () => {
       business_location: form.businessLocation.trim() || null,
       description: form.description.trim(),
       submitter_name: form.submitterName.trim() || null,
-      submitter_phone: form.submitterPhone.trim() || null,
+      submitter_phone: submitterPhoneNormalized || null,
       platforms: platformsArray.length > 0 ? platformsArray : null,
       platform: legacyPlatform,
     });

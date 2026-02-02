@@ -50,6 +50,12 @@ interface ReviewFormState {
   body: string;
 }
 
+function normalizePhone(s: string): string {
+  const trimmed = s.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/[^\d+]/g, "");
+}
+
 const statusLabel: Record<BusinessStatus, string> = {
   UNDER_REVIEW: "Under Review",
   MULTIPLE_REPORTS: "Multiple Independent Reports",
@@ -238,12 +244,12 @@ const BusinessDetailPage: NextPage = () => {
       return;
     }
 
-    const phone = form.reviewer_phone.trim();
+    const phoneNormalized = normalizePhone(form.reviewer_phone);
 
     const { data: existingNames, error: existingNamesError } = await supabase.
     from("reviews").
     select("reviewer_name,created_at").
-    eq("reviewer_phone", phone).
+    eq("reviewer_phone", phoneNormalized).
     not("reviewer_name", "is", null).
     neq("reviewer_name", "").
     order("created_at", { ascending: true }).
@@ -261,7 +267,7 @@ const BusinessDetailPage: NextPage = () => {
     const { error } = await supabase.from("reviews").insert({
       business_id: business.id,
       reviewer_name: nameToSave,
-      reviewer_phone: phone,
+      reviewer_phone: phoneNormalized,
       rating: ratingNumber,
       body: form.body.trim()
     });
