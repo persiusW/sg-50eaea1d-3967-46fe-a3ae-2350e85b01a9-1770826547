@@ -1,104 +1,281 @@
 import React, { useEffect, useState } from "react";
 import type { NextPage } from "next";
-import { useRouter } from "next/router";
-import { SEO } from "@/components/SEO";
 import { AdminNav } from "@/components/AdminNav";
+import { SEO } from "@/components/SEO";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
-import { authService } from "@/services/authService";
-
-type ReportStatus = "PENDING" | "IN_REVIEW" | "RESOLVED";
-type ReportType = "PHONE" | "BUSINESS";
 
 interface ScamReportRow {
   id: string;
-  report_type: ReportType;
+  report_type: string | null;
   phone: string | null;
   name_on_number: string | null;
   connected_page: string | null;
-  business_name: string | null;
-  business_category: string | null;
-  business_location: string | null;
   description: string | null;
+  platform: string | null;
+  status: string | null;
   submitter_name: string | null;
   submitter_phone: string | null;
-  platforms: string[] | null;
-  platform: string | null;
-  status: ReportStatus | null;
+  business_category: string | null;
+  business_location: string | null;
+  created_at: string | null;
   business_id: string | null;
   converted_review_id: string | null;
   converted_at: string | null;
-  created_at: string;
 }
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 20;
 
 const AdminReportsPage: NextPage = () => {
-  const router = useRouter();
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const [reports, setReports] = useState<ScamReportRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<ReportStatus | "ALL">("ALL");
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+  const [businessSearchTerm, setBusinessSearchTerm] = useState("");
+  const [businessSearchResults, setBusinessSearchResults] = useState<
+    { id: string; name: string; phone: string | null }[]
+  >([]);
+  const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+  const [convertLoading, setConvertLoading] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
+  const [convertSuccessId, setConvertSuccessId] = useState<string | null>(null);
   const [flaggingId, setFlaggingId] = useState<string | null>(null);
   const [flaggingError, setFlaggingError] = useState<string | null>(null);
   const [flaggingSuccessId, setFlaggingSuccessId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const session = await authService.getCurrentSession();
-      if (!session) {
-        router.replace("/admin/login");
-        return;
-      }
-      setCheckingAuth(false);
-    };
-    void checkAuth();
-  }, [router]);
-
-  const fetchReports = async (pageToLoad: number, status: ReportStatus | "ALL" = statusFilter) => {
+  const fetchReports = async (pageIndex: number) => {
     setLoading(true);
     setFlaggingError(null);
-    setFlaggingSuccessId(null);
-
-    const from = (pageToLoad - 1) * PAGE_SIZE;
+    setConvertError(null);
+    const from = pageIndex * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    let query = supabase
+    const { data, error, count } = await supabase
       .from("scam_reports")
       .select(
-        "id,report_type,phone,name_on_number,connected_page,business_name,business_category,business_location,description,submitter_name,submitter_phone,platforms,platform,status,business_id,converted_review_id,converted_at,created_at",
+        [
+          "id",
+          "report_type",
+          "phone",
+          "name_on_number",
+          "connected_page",
+          "description",
+          "platform",
+          "status",
+          "submitter_name",
+          "submitter_phone",
+          "business_category",
+          "business_location",
+          "created_at",
+          "business_id",
+          "converted_review_id",
+          "converted_at",
+        ].join(","),
+        { count: "exact" },
       )
       .order("created_at", { ascending: false })
       .range(from, to);
 
-    if (status !== "ALL") {
-      query = query.eq("status", status);
-    }
-
-    const { data, error } = await query;
-
-    if (!error && data) {
-      setReports(data as ScamReportRow[]);
-      setHasMore((data as ScamReportRow[]).length === PAGE_SIZE);
-    } else {
+    if (error) {
+      console.error("Error fetching scam reports", error);
+      // On error, do not feed error helpers into setReports; just clear to [] and reset count.
       setReports([]);
-      setHasMore(false);
+      setTotalCount(0);
+      setLoading(false);
+      return;
     }
 
+    // Happy path: normalize null to [] and explicitly narrow type.
+    const safeData = (data ?? []) as unknown as ScamReportRow[];
+    setReports(safeData);
+    setTotalCount(count ?? 0);
     setLoading(false);
   };
 
   useEffect(() => {
-    if (checkingAuth) return;
-    void fetchReports(page, statusFilter);
-  }, [checkingAuth, page, statusFilter]);
+    void fetchReports(page);
+  }, [page]);
 
-  const handleStatusFilterChange = (value: ReportStatus | "ALL") => {
-    setStatusFilter(value);
-    setPage(1);
+  const handleStatusChange = async (reportId: string, newStatus: string) => {
+    setStatusUpdatingId(reportId);
+    const { error } = await supabase
+      .from("scam_reports")
+      .update({ status: newStatus })
+      .eq("id", reportId);
+
+    if (error) {
+      console.error("Failed to update report status", error);
+      setStatusUpdatingId(null);
+      return;
+    }
+
+    setReports((prev) =>
+      prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r)),
+    );
+    setStatusUpdatingId(null);
+  };
+
+  const handleToggleView = (reportId: string) => {
+    setConvertError(null);
+    setConvertSuccessId(null);
+    if (expandedReportId === reportId) {
+      setExpandedReportId(null);
+      setBusinessSearchTerm("");
+      setBusinessSearchResults([]);
+      setSelectedBusinessId(null);
+      return;
+    }
+    setExpandedReportId(reportId);
+    setBusinessSearchTerm("");
+    setBusinessSearchResults([]);
+    setSelectedBusinessId(null);
+  };
+
+  const handleBusinessSearch = async (term: string) => {
+    setBusinessSearchTerm(term);
+    setBusinessSearchResults([]);
+
+    const trimmed = term.trim();
+    if (!trimmed) return;
+
+    const { data, error } = await supabase
+      .from("businesses")
+      .select("id,name,phone")
+      .or(`name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`)
+      .order("name", { ascending: true })
+      .limit(10);
+
+    if (error) {
+      console.error("Error searching businesses for report conversion", error);
+      return;
+    }
+
+    setBusinessSearchResults(
+      (data ?? []).map((b) => ({
+        id: b.id,
+        name: b.name,
+        phone: b.phone ?? null,
+      })),
+    );
+  };
+
+  type ConvertMode = "USE_EXISTING" | "CREATE_NEW";
+
+  const handleConvertToReview = async (report: ScamReportRow, mode: ConvertMode) => {
+    setConvertError(null);
+    setConvertSuccessId(null);
+    setConvertLoading(true);
+
+    try {
+      let businessId: string | null = null;
+
+      if (mode === "USE_EXISTING") {
+        if (!selectedBusinessId) {
+          setConvertError("Select a business before converting.");
+          setConvertLoading(false);
+          return;
+        }
+        businessId = selectedBusinessId;
+      } else {
+        const nameCandidate =
+          report.connected_page?.trim() ||
+          report.name_on_number?.trim() ||
+          "Unnamed business from report";
+        const phoneCandidate = report.phone?.trim() || null;
+
+        const insertPayload: Record<string, unknown> = {
+          name: nameCandidate,
+          phone: phoneCandidate,
+          category: report.business_category?.trim() || null,
+          location: report.business_location?.trim() || null,
+          status: "UNDER_REVIEW",
+          created_by_admin: true,
+          verified: false,
+        };
+
+        const { data: createdBusiness, error: createBusinessError } = await supabase
+          .from("businesses")
+          .insert(insertPayload)
+          .select("id")
+          .single();
+
+        if (createBusinessError || !createdBusiness) {
+          console.error("Failed to create business during report conversion", createBusinessError);
+          setConvertError("Failed to create business for this report.");
+          setConvertLoading(false);
+          return;
+        }
+
+        businessId = createdBusiness.id as string;
+      }
+
+      if (!businessId) {
+        setConvertError("Could not determine business to attach review to.");
+        setConvertLoading(false);
+        return;
+      }
+
+      const reviewPayload: Record<string, unknown> = {
+        business_id: businessId,
+        reviewer_name: report.submitter_name?.trim() || null,
+        reviewer_phone: report.submitter_phone?.trim() || null,
+        rating: 3,
+        body: report.description?.trim() || null,
+        created_by_admin: true,
+        verified: true,
+      };
+
+      const { data: insertedReview, error: insertReviewError } = await supabase
+        .from("reviews")
+        .insert(reviewPayload)
+        .select("id")
+        .single();
+
+      if (insertReviewError || !insertedReview) {
+        console.error("Failed to create review from report conversion", insertReviewError);
+        setConvertError("Failed to create review from this report.");
+        setConvertLoading(false);
+        return;
+      }
+
+      const { error: updateReportError } = await supabase
+        .from("scam_reports")
+        .update({
+          status: "RESOLVED",
+          business_id: businessId,
+          converted_review_id: insertedReview.id,
+          converted_at: new Date().toISOString(),
+        })
+        .eq("id", report.id);
+
+      if (updateReportError) {
+        console.error("Failed to update scam report after conversion", updateReportError);
+        setConvertError("Review created, but failed to update report status.");
+        setConvertLoading(false);
+        return;
+      }
+
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === report.id
+            ? {
+                ...r,
+                status: "RESOLVED",
+                business_id: businessId,
+                converted_review_id: insertedReview.id as string,
+                converted_at: new Date().toISOString(),
+              }
+            : r,
+        ),
+      );
+
+      setConvertSuccessId(report.id);
+    } finally {
+      setConvertLoading(false);
+    }
   };
 
   const handleFlagNumber = async (report: ScamReportRow) => {
@@ -112,7 +289,6 @@ const AdminReportsPage: NextPage = () => {
     const nameOnNumber = report.name_on_number?.trim() || null;
     const connectedPage = report.connected_page?.trim() || null;
 
-    // Check existing flagged_numbers row
     const { data: existing, error: existingError } = await supabase
       .from("flagged_numbers")
       .select("id,phone,name_on_number,connected_page,status,verified")
@@ -120,7 +296,8 @@ const AdminReportsPage: NextPage = () => {
       .maybeSingle();
 
     if (existingError) {
-      setFlaggingError("Failed to check existing flagged number.");
+      console.error("Error checking existing flagged number", existingError);
+      setFlaggingError("Failed to flag number. Please try again.");
       setFlaggingId(null);
       return;
     }
@@ -144,7 +321,8 @@ const AdminReportsPage: NextPage = () => {
         .eq("id", existing.id);
 
       if (updateFlagError) {
-        setFlaggingError("Failed to update flagged number.");
+        console.error("Error updating existing flagged number", updateFlagError);
+        setFlaggingError("Failed to flag number. Please try again.");
         setFlaggingId(null);
         return;
       }
@@ -158,7 +336,8 @@ const AdminReportsPage: NextPage = () => {
       });
 
       if (insertFlagError) {
-        setFlaggingError("Failed to flag number.");
+        console.error("Error inserting new flagged number", insertFlagError);
+        setFlaggingError("Failed to flag number. Please try again.");
         setFlaggingId(null);
         return;
       }
@@ -170,120 +349,127 @@ const AdminReportsPage: NextPage = () => {
       .eq("id", report.id);
 
     if (reportUpdateError) {
+      console.error("Failed to update scam report after flagging number", reportUpdateError);
       setFlaggingError("Number flagged, but failed to update report status.");
       setFlaggingId(null);
       return;
     }
 
+    setReports((prev) =>
+      prev.map((r) =>
+        r.id === report.id ? { ...r, status: "RESOLVED" } : r,
+      ),
+    );
+
     setFlaggingSuccessId(report.id);
     setFlaggingId(null);
-    void fetchReports(page, statusFilter);
   };
 
-  if (checkingAuth) {
-    return (
-      <>
-        <SEO
-          title="Admin reports – Transparent Turtle"
-          description="Review and convert scam reports in the Transparent Turtle admin dashboard."
-        />
-        <main className="min-h-screen bg-background text-foreground">
-          <div className="container flex min-h-screen items-center justify-center">
-            <p className="text-sm text-muted-foreground">Checking access…</p>
-          </div>
-        </main>
-      </>
-    );
-  }
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <>
-      <SEO
-        title="Admin reports – Transparent Turtle"
-        description="Review and convert scam reports in the Transparent Turtle admin dashboard."
-      />
-      <main className="min-h-screen bg-background text-foreground">
-        <div className="container flex min-h-screen flex-col gap-6 py-8">
-          <AdminNav />
-          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-xl font-semibold tracking-tight">Reports (admin)</h1>
-              <p className="text-sm text-muted-foreground">
-                Review incoming scam reports, flag numbers, and convert reports into public reviews.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Filter status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All statuses</SelectItem>
-                  <SelectItem value="PENDING">Pending</SelectItem>
-                  <SelectItem value="IN_REVIEW">In review</SelectItem>
-                  <SelectItem value="RESOLVED">Resolved</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </header>
+      <SEO title="Admin – Reports – Transparent Turtle" />
+      <AdminNav />
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4">
+        <header className="flex items-center justify-between gap-2">
+          <h1 className="text-base font-semibold tracking-tight">Scam reports</h1>
+          <p className="text-xs text-muted-foreground">
+            {loading ? "Loading…" : `${totalCount} reports`}
+          </p>
+        </header>
 
-          <section className="space-y-3 rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium">All reports</p>
-              {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
-            </div>
+        {convertError && (
+          <p className="text-xs text-destructive-foreground">{convertError}</p>
+        )}
+        {flaggingError && (
+          <p className="text-xs text-destructive-foreground">{flaggingError}</p>
+        )}
 
-            {flaggingError && (
-              <p className="text-xs text-destructive-foreground">
-                {flaggingError}
-              </p>
-            )}
+        <div className="overflow-x-auto rounded-md border border-border/60 bg-background">
+          <table className="min-w-full border-collapse">
+            <thead>
+              <tr className="border-b border-border/60 bg-muted/40 text-xs font-medium">
+                <th className="px-3 py-2 text-left">Type</th>
+                <th className="px-3 py-2 text-left">Phone</th>
+                <th className="px-3 py-2 text-left">Business name</th>
+                <th className="px-3 py-2 text-left">Submitted by</th>
+                <th className="px-3 py-2 text-left">Platform</th>
+                <th className="px-3 py-2 text-left">Status</th>
+                <th className="px-3 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60 text-xs">
+              {reports.map((report) => {
+                const isExpanded = expandedReportId === report.id;
+                const businessName =
+                  report.connected_page?.trim() ||
+                  report.name_on_number?.trim() ||
+                  "—";
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px] border-collapse text-xs sm:text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-muted-foreground">
-                    <th className="py-2 pr-3">Type</th>
-                    <th className="py-2 px-3">Phone</th>
-                    <th className="py-2 px-3">Platform</th>
-                    <th className="py-2 px-3">Category</th>
-                    <th className="py-2 px-3">Status</th>
-                    <th className="py-2 pl-3 text-right">Created at</th>
-                    <th className="py-2 pl-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reports.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="py-4 text-center text-xs text-muted-foreground"
-                      >
-                        No reports yet.
+                return (
+                  <React.Fragment key={report.id}>
+                    <tr className="align-top">
+                      <td className="px-3 py-2">
+                        {report.report_type === "BUSINESS" ? "Business/page" : "Phone"}
                       </td>
-                    </tr>
-                  ) : (
-                    reports.map((report) => (
-                      <tr key={report.id} className="border-b border-border/60 align-top">
-                        <td className="py-2 pr-3">
-                          {report.report_type === "PHONE" ? "Phone number" : "Business / page"}
-                        </td>
-                        <td className="py-2 px-3 whitespace-nowrap">
-                          {report.phone || "—"}
-                        </td>
-                        <td className="py-2 px-3">
-                          {report.platform || "—"}
-                        </td>
-                        <td className="py-2 px-3">
-                          {report.business_category || "—"}
-                        </td>
-                        <td className="py-2 px-3">
-                          {report.status || "PENDING"}
-                        </td>
-                        <td className="py-2 pl-3 text-right text-[11px] text-muted-foreground whitespace-nowrap">
-                          {new Date(report.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="py-2 pl-3 text-right whitespace-nowrap space-x-2">
+                      <td className="px-3 py-2">
+                        <span className="block break-all">
+                          {report.phone ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="line-clamp-1 break-all">{businessName}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-col gap-0.5">
+                          <span>{report.submitter_name ?? "—"}</span>
+                          {report.submitter_phone && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {report.submitter_phone}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="line-clamp-2 break-words">
+                          {report.platform ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Select
+                          value={report.status ?? "PENDING"}
+                          onValueChange={(value) =>
+                            void handleStatusChange(report.id, value)
+                          }
+                          disabled={statusUpdatingId === report.id}
+                        >
+                          <SelectTrigger className="h-7 w-[150px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PENDING">Pending</SelectItem>
+                            <SelectItem value="UNDER_REVIEW">Under review</SelectItem>
+                            <SelectItem value="MULTIPLE_REPORTS">
+                              Multiple independent reports
+                            </SelectItem>
+                            <SelectItem value="PATTERN_MATCH_SCAM">
+                              Pattern match: known scam method
+                            </SelectItem>
+                            <SelectItem value="RESOLVED">Resolved</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleView(report.id)}
+                          >
+                            {isExpanded ? "Hide" : "View"}
+                          </Button>
                           {report.phone && (
                             <Button
                               type="button"
@@ -295,47 +481,198 @@ const AdminReportsPage: NextPage = () => {
                               {flaggingId === report.id ? "Flagging…" : "Flag number"}
                             </Button>
                           )}
-                          {flaggingSuccessId === report.id && (
-                            <span className="ml-1 text-[11px] text-emerald-600">
-                              Number flagged
-                            </span>
-                          )}
-                          {/* Existing convert-to-review actions remain unchanged */}
+                        </div>
+                        {convertSuccessId === report.id && (
+                          <p className="mt-1 text-[10px] text-emerald-600">
+                            Converted to review.
+                          </p>
+                        )}
+                        {flaggingSuccessId === report.id && (
+                          <p className="mt-1 text-[10px] text-emerald-600">
+                            Number flagged.
+                          </p>
+                        )}
+                      </td>
+                    </tr>
+
+                    {isExpanded && (
+                      <tr className="border-b border-border/60 bg-muted/30">
+                        <td colSpan={7} className="px-3 py-3">
+                          <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                            <div className="space-y-2 text-xs">
+                              <h3 className="font-medium">Report details</h3>
+                              <dl className="space-y-1">
+                                <div className="flex justify-between gap-2">
+                                  <dt className="text-muted-foreground">Name on number</dt>
+                                  <dd className="text-right">
+                                    {report.name_on_number ?? "—"}
+                                  </dd>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <dt className="text-muted-foreground">Connected page</dt>
+                                  <dd className="text-right break-all">
+                                    {report.connected_page ?? "—"}
+                                  </dd>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <dt className="text-muted-foreground">Location</dt>
+                                  <dd className="text-right">
+                                    {report.business_location ?? "—"}
+                                  </dd>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <dt className="text-muted-foreground">Category</dt>
+                                  <dd className="text-right">
+                                    {report.business_category ?? "—"}
+                                  </dd>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <dt className="text-muted-foreground">Submitted by</dt>
+                                  <dd className="text-right">
+                                    {report.submitter_name ?? "—"}
+                                  </dd>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <dt className="text-muted-foreground">Submitter phone</dt>
+                                  <dd className="text-right">
+                                    {report.submitter_phone ?? "—"}
+                                  </dd>
+                                </div>
+                                <div className="flex justify-between gap-2">
+                                  <dt className="text-muted-foreground">Platform</dt>
+                                  <dd className="text-right">
+                                    {report.platform ?? "—"}
+                                  </dd>
+                                </div>
+                              </dl>
+                              <div className="mt-2">
+                                <div className="mb-1 text-xs font-medium">Description</div>
+                                <p className="whitespace-pre-wrap text-xs">
+                                  {report.description ?? "—"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {report.report_type === "BUSINESS" && (
+                              <div className="space-y-3 text-xs">
+                                <h3 className="font-medium">Convert to review</h3>
+                                <div className="space-y-1">
+                                  <label className="text-xs text-muted-foreground">
+                                    Search existing businesses
+                                  </label>
+                                  <input
+                                    className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                                    value={businessSearchTerm}
+                                    onChange={(e) =>
+                                      void handleBusinessSearch(e.target.value)
+                                    }
+                                    placeholder="Search by name or phone"
+                                  />
+                                  {businessSearchResults.length > 0 && (
+                                    <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-border bg-background">
+                                      {businessSearchResults.map((b) => (
+                                        <button
+                                          key={b.id}
+                                          type="button"
+                                          onClick={() => setSelectedBusinessId(b.id)}
+                                          className={`flex w-full items-center justify-between px-2 py-1 text-left text-xs hover:bg-muted ${
+                                            selectedBusinessId === b.id
+                                              ? "bg-muted"
+                                              : ""
+                                          }`}
+                                        >
+                                          <span className="line-clamp-1">{b.name}</span>
+                                          {b.phone && (
+                                            <span className="ml-2 text-[10px] text-muted-foreground">
+                                              {b.phone}
+                                            </span>
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  {selectedBusinessId && (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      disabled={convertLoading}
+                                      onClick={() =>
+                                        void handleConvertToReview(report, "USE_EXISTING")
+                                      }
+                                    >
+                                      {convertLoading
+                                        ? "Converting…"
+                                        : "Convert to review (use selected business)"}
+                                    </Button>
+                                  )}
+                                  <div>
+                                    <div className="mb-1 text-xs font-medium">
+                                      Or create new business and convert
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      disabled={convertLoading}
+                                      onClick={() =>
+                                        void handleConvertToReview(report, "CREATE_NEW")
+                                      }
+                                    >
+                                      {convertLoading
+                                        ? "Creating & converting…"
+                                        : "Create new business and convert"}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-3 text-xs">
-              <button
-                type="button"
-                onClick={() =>
-                  setPage((prev) => (prev > 1 && !loading ? prev - 1 : prev))
-                }
-                disabled={page === 1 || loading}
-                className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <p className="text-[11px] text-muted-foreground">
-                Page {page}
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  setPage((prev) => (hasMore && !loading ? prev + 1 : prev))
-                }
-                disabled={!hasMore || loading}
-                className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
-          </section>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+              {!loading && reports.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-3 py-4 text-center text-xs text-muted-foreground"
+                  >
+                    No reports found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
+
+        {totalPages > 1 && (
+          <section className="flex items-center justify-between gap-3 text-xs">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              Previous
+            </Button>
+            <span className="text-muted-foreground">
+              Page {page + 1} of {totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages - 1}
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            >
+              Next
+            </Button>
+          </section>
+        )}
       </main>
     </>
   );

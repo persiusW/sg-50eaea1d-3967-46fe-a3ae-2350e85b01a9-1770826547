@@ -116,9 +116,12 @@ const ReportPage: NextPage = () => {
 
     const basePlatforms = form.platforms.filter((p) => p !== "Other");
     const trimmedOther = form.otherPlatform.trim();
-    const allPlatforms = trimmedOther.length > 0 ? [...basePlatforms, trimmedOther] : basePlatforms;
+    const allPlatforms =
+      trimmedOther.length > 0 ? [...basePlatforms, trimmedOther] : basePlatforms;
+
     const platformsArray = allPlatforms.length > 0 ? allPlatforms : [];
-    const legacyPlatform = platformsArray.length > 0 ? platformsArray.join(", ") : null;
+    const legacyPlatform =
+      platformsArray.length > 0 ? platformsArray.join(", ") : null;
 
     const businessCategoryResolved =
       form.businessCategory === "OTHER"
@@ -130,7 +133,6 @@ const ReportPage: NextPage = () => {
       phone,
       name_on_number: form.nameOnNumber.trim() || null,
       connected_page: form.connectedPage.trim() || null,
-      business_name: form.businessName.trim() || null,
       business_category: businessCategoryResolved,
       business_location: form.businessLocation.trim() || null,
       description: form.description.trim(),
