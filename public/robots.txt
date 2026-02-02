@@ -1,0 +1,11 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+
+# Host
+Host: https://www.transparentturtle.com
+
+# Sitemaps
+Sitemap: https://www.transparentturtle.com/sitemap.xml
