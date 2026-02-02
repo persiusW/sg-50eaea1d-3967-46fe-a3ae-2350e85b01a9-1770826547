@@ -43,6 +43,8 @@ const TOP_CATEGORIES: string[] = [
   "Logistics / Delivery Service",
 ];
 
+const PLATFORM_OPTIONS = ["Instagram", "WhatsApp", "Facebook", "TikTok", "Website"];
+
 type FormState = {
   name: string;
   phone: string;
@@ -50,6 +52,8 @@ type FormState = {
   branchesCount: string;
   category: string; // holds either a predefined category or "__OTHER__"
   customCategory: string;
+  platforms: string[];
+  otherPlatform: string;
 };
 
 const OTHER_VALUE = "__OTHER__";
@@ -64,11 +68,36 @@ const AddBusinessPage: NextPage = () => {
     branchesCount: "",
     category: "",
     customCategory: "",
+    platforms: [],
+    otherPlatform: "",
   });
   const [categories, setCategories] = useState<string[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const handlePlatformToggle = (platform: string) => {
+    setForm((prev) => {
+      const exists = prev.platforms.includes(platform);
+      return {
+        ...prev,
+        platforms: exists
+          ? prev.platforms.filter((p) => p !== platform)
+          : [...prev.platforms, platform],
+      };
+    });
+  };
+
+  const handleOtherPlatformChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, otherPlatform: e.target.value }));
+  };
+
+  const buildPlatformsPayload = () => {
+    const base = form.platforms;
+    const trimmedOther = form.otherPlatform.trim();
+    const all = trimmedOther.length > 0 ? [...base, trimmedOther] : base;
+    return all.length > 0 ? all : null;
+  };
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -132,6 +161,7 @@ const AddBusinessPage: NextPage = () => {
     const location = form.location.trim();
     const branchesStr = form.branchesCount.trim();
     const categoryResolved = resolveCategory();
+    const platforms = buildPlatformsPayload();
 
     if (!name || !phone) {
       setFormError("Name and phone are required.");
@@ -179,6 +209,7 @@ const AddBusinessPage: NextPage = () => {
         category: categoryResolved,
         verified: false,
         created_by_admin: false,
+        platforms,
       })
       .select("id")
       .maybeSingle();
@@ -318,6 +349,46 @@ const AddBusinessPage: NextPage = () => {
                       </p>
                     </div>
                   )}
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      Platforms involved (optional)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {PLATFORM_OPTIONS.map((platform) => (
+                        <label
+                          key={platform}
+                          className="flex items-center gap-1 text-xs text-foreground"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3"
+                            checked={form.platforms.includes(platform)}
+                            onChange={() => handlePlatformToggle(platform)}
+                          />
+                          <span>{platform}</span>
+                        </label>
+                      ))}
+                      <label className="flex items-center gap-1 text-xs text-foreground">
+                        <input
+                          type="checkbox"
+                          className="h-3 w-3"
+                          checked={form.platforms.includes("Other")}
+                          onChange={() => handlePlatformToggle("Other")}
+                        />
+                        <span>Other</span>
+                      </label>
+                    </div>
+                    {form.platforms.includes("Other") && (
+                      <input
+                        type="text"
+                        className="mt-2 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+                        placeholder="Specify platform"
+                        value={form.otherPlatform}
+                        onChange={handleOtherPlatformChange}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 {formError && (

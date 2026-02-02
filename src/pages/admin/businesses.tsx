@@ -46,6 +46,8 @@ const TOP_CATEGORIES: string[] = [
 
 const OTHER_VALUE = "__OTHER__";
 
+const PLATFORM_OPTIONS = ["Instagram", "WhatsApp", "Facebook", "TikTok", "Website"];
+
 type BusinessStatus =
   | "UNDER_REVIEW"
   | "MULTIPLE_REPORTS"
@@ -63,18 +65,35 @@ interface Business {
   status: BusinessStatus | null;
   verified: boolean;
   created_at: string;
+  platforms: string[] | null;
 }
 
-interface FormState {
-  id?: string;
+interface BusinessRow {
+  id: string;
+  name: string;
+  phone: string;
+  location: string | null;
+  category: string | null;
+  branches_count: number | null;
+  status: BusinessStatus | null;
+  verified: boolean;
+  created_by_admin: boolean | null;
+  platforms: string[] | null;
+  created_at: string;
+}
+
+interface BusinessFormState {
   name: string;
   phone: string;
   location: string;
-  branches_count: string;
-  category: string; // holds either a predefined category or "__OTHER__"
-  customCategory: string;
-  status: BusinessStatus | "__NONE__";
+  branchesCount: string;
+  category: string;
+  status: BusinessStatus | "";
   verified: boolean;
+  createdByAdmin: boolean;
+  platforms: string[];
+  otherPlatform: string;
+  customCategory: string;
 }
 
 const statusLabel: Record<BusinessStatus, string> = {
@@ -92,15 +111,18 @@ const AdminBusinessesPage: NextPage = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState<FormState>({
+  const [form, setForm] = useState<BusinessFormState>({
     name: "",
     phone: "",
     location: "",
-    branches_count: "",
+    branchesCount: "",
     category: "",
+    status: "",
+    verified: false,
+    createdByAdmin: true,
+    platforms: [],
+    otherPlatform: "",
     customCategory: "",
-    status: "__NONE__",
-    verified: true,
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -109,6 +131,29 @@ const AdminBusinessesPage: NextPage = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+
+  const handlePlatformToggle = (platform: string) => {
+    setForm((prev) => {
+      const exists = prev.platforms.includes(platform);
+      return {
+        ...prev,
+        platforms: exists
+          ? prev.platforms.filter((p) => p !== platform)
+          : [...prev.platforms, platform],
+      };
+    });
+  };
+
+  const handleOtherPlatformChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, otherPlatform: e.target.value }));
+  };
+
+  const buildPlatformsPayload = () => {
+    const base = form.platforms;
+    const trimmedOther = form.otherPlatform.trim();
+    const all = trimmedOther.length > 0 ? [...base, trimmedOther] : base;
+    return all.length > 0 ? all : null;
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -189,11 +234,14 @@ const AdminBusinessesPage: NextPage = () => {
       name: "",
       phone: "",
       location: "",
-      branches_count: "",
+      branchesCount: "",
       category: "",
+      status: "",
+      verified: false,
+      createdByAdmin: true,
+      platforms: [],
+      otherPlatform: "",
       customCategory: "",
-      status: "__NONE__",
-      verified: true,
     });
     setEditingId(null);
     setFormError(null);
@@ -205,29 +253,30 @@ const AdminBusinessesPage: NextPage = () => {
 
   const startEdit = (biz: Business) => {
     setEditingId(biz.id);
+    const matchedCategory = categoryOptions.find(
+      (opt) => opt.toLowerCase() === (biz.category || "").toLowerCase(),
+    );
     setForm({
-      id: biz.id,
       name: biz.name,
       phone: biz.phone,
       location: biz.location ?? "",
-      branches_count: biz.branches_count ? String(biz.branches_count) : "",
-      category: categoryOptions.find(
-        (opt) => opt.toLowerCase() === (biz.category || "").toLowerCase(),
-      ) || OTHER_VALUE,
-      customCategory:
-        categoryOptions.find(
-          (opt) => opt.toLowerCase() === (biz.category || "").toLowerCase(),
-        )
-          ? ""
-          : biz.category,
-      status: biz.status ?? "__NONE__",
+      branchesCount: biz.branches_count ? String(biz.branches_count) : "",
+      category: matchedCategory || OTHER_VALUE,
+      customCategory: matchedCategory ? "" : biz.category || "",
+      status: biz.status ?? "",
       verified: biz.verified,
+      createdByAdmin: true,
+      platforms: biz.platforms ?? [],
+      otherPlatform: "",
     });
     setFormError(null);
   };
 
-  const handleFormChange = (field: keyof FormState, value: string | boolean) => {
-    setForm((prev) => ({ ...prev, [field]: value } as FormState));
+  const handleFormChange = (
+    field: keyof BusinessFormState,
+    value: string | boolean,
+  ) => {
+    setForm((prev) => ({ ...prev, [field]: value } as BusinessFormState));
   };
 
   const resolveCategory = (): string | null => {
@@ -251,7 +300,7 @@ const AdminBusinessesPage: NextPage = () => {
     const name = form.name.trim();
     const phone = form.phone.trim();
     const location = form.location.trim();
-    const branchesStr = form.branches_count.trim();
+    const branchesStr = form.branchesCount.trim();
     const status = form.status;
     const verified = form.verified;
 
@@ -273,7 +322,11 @@ const AdminBusinessesPage: NextPage = () => {
       return;
     }
 
-    const branchesCountNumber = branchesStr ? parseInt(branchesStr, 10) : null;
+    const branchesCountNumber = branchesStr
+      ? Number.parseInt(branchesStr, 10)
+      : null;
+
+    const platformsPayload = buildPlatformsPayload();
 
     const payload: Record<string, unknown> = {
       name,
@@ -283,9 +336,10 @@ const AdminBusinessesPage: NextPage = () => {
         ? null
         : branchesCountNumber,
       category: categoryResolved,
-      status: status === "__NONE__" ? null : status,
+      status: status || null,
       verified,
       created_by_admin: true,
+      platforms: platformsPayload,
     };
 
     let error = null;
@@ -432,9 +486,9 @@ const AdminBusinessesPage: NextPage = () => {
                       id="branches_count"
                       type="number"
                       min={1}
-                      value={form.branches_count}
+                      value={form.branchesCount}
                       onChange={(e) =>
-                        handleFormChange("branches_count", e.target.value)
+                        handleFormChange("branchesCount", e.target.value)
                       }
                     />
                   </div>
@@ -537,6 +591,48 @@ const AdminBusinessesPage: NextPage = () => {
                       Admin-only flag. New businesses default to verified but can be turned off if needed.
                     </p>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-medium text-foreground">
+                    Platforms involved (optional)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {PLATFORM_OPTIONS.map((platform) => (
+                      <label
+                        key={platform}
+                        className="flex items-center gap-1 text-xs text-foreground"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-3 w-3"
+                          checked={form.platforms.includes(platform)}
+                          onChange={() => handlePlatformToggle(platform)}
+                        />
+                        <span>{platform}</span>
+                      </label>
+                    ))}
+                    <label
+                      className="flex items-center gap-1 text-xs text-foreground"
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-3 w-3"
+                        checked={form.platforms.includes("Other")}
+                        onChange={() => handlePlatformToggle("Other")}
+                      />
+                      <span>Other</span>
+                    </label>
+                  </div>
+                  {form.platforms.includes("Other") && (
+                    <input
+                      type="text"
+                      className="mt-2 w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
+                      placeholder="Specify platform"
+                      value={form.otherPlatform}
+                      onChange={handleOtherPlatformChange}
+                    />
+                  )}
                 </div>
 
                 {formError && (

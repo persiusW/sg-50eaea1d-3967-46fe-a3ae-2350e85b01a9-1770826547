@@ -424,20 +424,17 @@ const BusinessDetailPage: NextPage = () => {
                     </div>
                   </div>
 
-                  {Array.isArray(business.platforms) &&
-                  business.platforms.length > 0 && (
-                    <div className="mt-2 space-y-1 text-xs">
-                      <p className="text-muted-foreground">Platforms</p>
-                      <div className="flex flex-wrap gap-1">
-                        {business.platforms.map((p) => (
-                          <span
-                            key={p}
-                            className="rounded-full bg-muted px-2 py-0.5 text-[11px]"
-                          >
-                            {p}
-                          </span>
-                        ))}
-                      </div>
+                  {business.platforms && business.platforms.length > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1 text-xs">
+                      <span className="font-medium text-muted-foreground">Platforms:</span>
+                      {business.platforms.map((p) => (
+                        <span
+                          key={p}
+                          className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-foreground"
+                        >
+                          {p}
+                        </span>
+                      ))}
                     </div>
                   )}
 
