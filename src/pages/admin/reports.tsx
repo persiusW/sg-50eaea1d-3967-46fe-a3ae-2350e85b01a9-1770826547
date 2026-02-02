@@ -203,7 +203,10 @@ const AdminReportsPage: NextPage = () => {
             .maybeSingle();
 
           if (existingBizError) {
-            console.error("Error checking existing business by phone during report conversion", existingBizError);
+            console.error(
+              "Error checking existing business by phone during report conversion",
+              existingBizError,
+            );
             setConvertError("Failed to check existing business for this phone.");
             setConvertLoading(false);
             return;
@@ -257,7 +260,9 @@ const AdminReportsPage: NextPage = () => {
       }
 
       const reviewerPhoneRaw = report.submitter_phone?.trim() || "";
-      const reviewerPhoneNormalized = reviewerPhoneRaw ? normalizePhone(reviewerPhoneRaw) : "";
+      const reviewerPhoneNormalized = reviewerPhoneRaw
+        ? normalizePhone(reviewerPhoneRaw)
+        : "";
 
       const reviewPayload: Record<string, unknown> = {
         business_id: businessId,
@@ -265,7 +270,6 @@ const AdminReportsPage: NextPage = () => {
         reviewer_phone: reviewerPhoneNormalized || null,
         rating: 3,
         body: report.description?.trim() || null,
-        verified: true,
       };
 
       const { data: insertedReview, error: insertReviewError } = await supabase

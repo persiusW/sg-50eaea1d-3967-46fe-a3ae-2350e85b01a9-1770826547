@@ -321,6 +321,11 @@ const BusinessDetailPage: NextPage = () => {
   const title =
   business?.name ?? "Business profile – Transparent Turtle";
 
+  const effectiveStatus: BusinessStatus | null =
+  business && (business.status === "__NONE__" || business.status === null)
+    ? null
+    : (business?.status ?? null);
+
   return (
     <>
       <SEO
@@ -382,26 +387,26 @@ const BusinessDetailPage: NextPage = () => {
                     }
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      {business.status &&
-                    business.status !== "VERIFIED" &&
+                      {effectiveStatus &&
+                    effectiveStatus !== "VERIFIED" &&
                     <Badge
                       className={
-                      business.status === "SCAM" ?
+                      effectiveStatus === "SCAM" ?
                       "border bg-red-600 text-red-50 dark:bg-red-900 dark:text-red-100" :
                       "border " + (
-                      statusBadgeClass[business.status] ||
+                      statusBadgeClass[effectiveStatus] ||
                       "bg-muted text-foreground")
                       }>
 
-                            {business.status === "SCAM" ?
+                            {effectiveStatus === "SCAM" ?
                       "⛔ Confirmed Scam" :
-                      statusLabel[business.status] ??
-                      business.status}
+                      statusLabel[effectiveStatus] ??
+                      effectiveStatus}
                           </Badge>
                     }
 
-                      {(!business.status ||
-                    business.status === "VERIFIED") &&
+                      {(!effectiveStatus ||
+                    effectiveStatus === "VERIFIED") &&
                     <p className="text-[11px] text-muted-foreground">
                           {reviewsCount > 0 ?
                       `⭐ ${avgRating.toFixed(
@@ -635,6 +640,10 @@ Please keep contributions respectful, factual, and constructive.
                         const isFlagged =
                           !!phoneKey && flaggedPhones.has(phoneKey);
 
+                        const isFromReport =
+                          typeof review.body === "string" &&
+                          review.body.startsWith("Converted from report submission");
+
                         return (
                           <div
                             key={review.id}
@@ -642,10 +651,17 @@ Please keep contributions respectful, factual, and constructive.
                           >
                             <div className="flex items-center justify-between gap-2">
                               <div>
-                                <p className="font-medium">
-                                  {review.reviewer_name?.trim() ||
-                                    "Unnamed reviewer"}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">
+                                    {review.reviewer_name?.trim() ||
+                                      "Unnamed reviewer"}
+                                  </p>
+                                  {isFromReport && (
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                                      From report
+                                    </span>
+                                  )}
+                                </div>
                                 {transparencyLabel && (
                                   <p className="text-[11px] text-muted-foreground">
                                     {transparencyLabel}
