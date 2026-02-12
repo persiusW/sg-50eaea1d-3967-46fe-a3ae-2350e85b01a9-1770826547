@@ -511,7 +511,7 @@ Please keep contributions respectful, factual, and constructive.
                           e.target.value
                         )
                         }
-                        placeholder="Name or alias"
+                        placeholder="First and last name"
                         required />
 
                         {nameError &&
@@ -537,7 +537,7 @@ Please keep contributions respectful, factual, and constructive.
                           e.target.value
                         )
                         }
-                        placeholder="+1 (___) ___-____"
+                        placeholder="0555 555 555"
                         required />
 
                       </div>

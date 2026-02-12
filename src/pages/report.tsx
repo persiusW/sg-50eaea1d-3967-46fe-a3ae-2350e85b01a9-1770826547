@@ -336,7 +336,7 @@ const ReportPage: NextPage = () => {
                   id="submitterName"
                   value={form.submitterName}
                   onChange={(e) => handleChange("submitterName", e.target.value)}
-                  placeholder="First name or alias is fine"
+                  placeholder="First and last name"
                 />
               </div>
               <div className="space-y-1">
