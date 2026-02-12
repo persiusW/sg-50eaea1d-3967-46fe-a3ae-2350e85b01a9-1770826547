@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface ReviewRow {
   id: string;
@@ -54,6 +55,7 @@ const AdminReviewsPage: NextPage = () => {
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<string | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -252,19 +254,17 @@ const AdminReviewsPage: NextPage = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm(
-      "Delete this review? This action cannot be undone."
-    );
-    if (!confirmed) return;
-
-    setDeletingId(id);
-    const { error } = await supabase.from("reviews").delete().eq("id", id);
-    if (!error) {
-      await refreshPage(page);
-    }
-    setDeletingId(null);
-  };
+ const confirmDelete = async (id: string) => {
+  setDeletingId(id);
+  const { error } = await supabase.from("reviews").delete().eq("id", id);
+  if (!error) {
+    await refreshPage(page);
+  }
+  setDeletingId(null);
+};
+const handleDelete = (id: string) => {
+  setDeleteIdToConfirm(id);
+};
 
   const handleFilterByBusiness = (name: string) => {
     setSearch(name);
@@ -633,6 +633,17 @@ const AdminReviewsPage: NextPage = () => {
             </div>
           </section>
         </div>
+        <ConfirmDialog
+          isOpen={deleteIdToConfirm !== null}
+          onOpenChange={(open) => !open && setDeleteIdToConfirm(null)}
+          title="Delete Review"
+          description="Delete this review? This action cannot be undone."
+          onConfirm={() => {
+            const id = deleteIdToConfirm;
+            setDeleteIdToConfirm(null);
+            if (id) confirmDelete(id);
+          }}
+        />
       </main>
     </>
   );

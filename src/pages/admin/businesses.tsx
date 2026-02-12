@@ -15,6 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const TOP_CATEGORIES: string[] = [
   "Restaurant",
@@ -133,6 +134,7 @@ const AdminBusinessesPage: NextPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -375,18 +377,16 @@ const AdminBusinessesPage: NextPage = () => {
     setSaving(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm(
-      "Delete this business? This will also remove its reviews.",
-    );
-    if (!confirmed) return;
+const confirmDelete = async (id: string) => {
+  setDeletingId(id);
+  await supabase.from("businesses").delete().eq("id", id);
+  await fetchBusinessesPage(page);
+  setDeletingId(null);
+};
 
-    setDeletingId(id);
-    await supabase.from("businesses").delete().eq("id", id);
-    await fetchBusinessesPage(page);
-    setDeletingId(null);
-  };
-
+const handleDelete = (id: string) => {
+  setDeleteIdToConfirm(id);
+};
   const handleSignOut = async () => {
     await authService.signOut();
     router.replace("/admin/login");
@@ -800,6 +800,17 @@ const AdminBusinessesPage: NextPage = () => {
             </div>
           </section>
         </div>
+        <ConfirmDialog
+          isOpen={deleteIdToConfirm !== null}
+          onOpenChange={(open) => !open && setDeleteIdToConfirm(null)}
+          title="Delete Business"
+          description="Delete this business? This will also remove its reviews."
+          onConfirm={() => {
+            const id = deleteIdToConfirm;
+            setDeleteIdToConfirm(null);
+            if (id) confirmDelete(id);
+          }}
+        />
       </main>
     </>
   );
