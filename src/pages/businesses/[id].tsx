@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusLegend } from "@/components/StatusLegend";
 import { PublicNav } from "@/components/PublicNav";
-import { ListSkeleton } from "@/components/skeletons/AppSkeletons";
+import { ReviewCardsListSkeleton } from "@/components/skeletons/AppSkeletons";
 
 type BusinessStatus =
 "UNDER_REVIEW" |
@@ -645,7 +645,7 @@ Please keep contributions respectful, factual, and constructive.
                   </div>
 
                   {loadingReviews ? (
-                    <ListSkeleton count={6} />
+                    <ReviewCardsListSkeleton count={6} />
                   ) : reviews.length === 0 ? (
                     <p className="mt-3 text-xs text-muted-foreground">
                       No reviews yet. Be the first to share your experience.
