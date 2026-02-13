@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-
+ 
 const TOP_CATEGORIES: string[] = [
   "Restaurant",
   "Fast Food Restaurant",
