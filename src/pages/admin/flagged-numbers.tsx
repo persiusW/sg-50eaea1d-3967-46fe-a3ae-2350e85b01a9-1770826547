@@ -216,7 +216,7 @@ export default function AdminFlaggedNumbersPage() {
       });
       setRowErrors((prev) => ({
         ...prev,
-        [id]: "Failed to update status. Try again.",
+          [rowId]: "Failed to update status. Try again.",
       }));
     } else {
       toast({
@@ -224,7 +224,7 @@ export default function AdminFlaggedNumbersPage() {
         description: "Flagged number status updated successfully.",
       });
     }
-    setSavingIds((prev) => prev.filter((savingId) => savingId !== id));
+      setSavingIds((prev) => prev.filter((savingId) => savingId !== rowId));
   };
 
  const handleSubmit = async (e: React.FormEvent) => {
