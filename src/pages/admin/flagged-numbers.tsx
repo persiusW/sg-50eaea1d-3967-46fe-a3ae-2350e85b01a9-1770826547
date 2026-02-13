@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminNav } from "@/components/AdminNav";
+import { toast } from "@/hooks/use-toast";
 
 type FlagStatus =
   | "UNDER_REVIEW"
@@ -103,6 +104,7 @@ export default function AdminFlaggedNumbersPage() {
   const [savingIds, setSavingIds] = useState<string[]>([]);
 
   const load = async (pageNumber: number) => {
+    setError(null);
     setLoading(true);
     setLoadingPage(true);
 
@@ -119,6 +121,11 @@ export default function AdminFlaggedNumbersPage() {
 
     if (error) {
       setError(error.message);
+      toast({
+        title: "Unable to load flagged numbers",
+        description: error.message,
+        variant: "destructive",
+      });
       setItems([]);
       setIsLastPage(true);
     } else if (data) {
@@ -174,12 +181,21 @@ export default function AdminFlaggedNumbersPage() {
       .eq("id", id);
     if (error) {
       setError(error.message);
+      toast({
+        title: "Unable to delete flagged number",
+        description: error.message,
+        variant: "destructive",
+      });
     } else {
       // reload current page to keep context
       await load(page);
       if (form.id === id) {
         resetForm();
       }
+      toast({
+        title: "Flagged number removed",
+        description: "The entry was deleted successfully.",
+      });
     }
     setSaving(false);
   };
@@ -212,6 +228,11 @@ export default function AdminFlaggedNumbersPage() {
           row.id === rowId ? { ...row, status: previousStatus || "UNDER_REVIEW" } : row
         )
       );
+      toast({
+        title: "Status update failed",
+        description: "Could not update flagged number status.",
+        variant: "destructive",
+      });
     }
 
     setSavingIds((prev) => prev.filter((id) => id !== rowId));
@@ -233,7 +254,13 @@ export default function AdminFlaggedNumbersPage() {
     };
 
     if (!payload.phone) {
-      setError("Phone number is required.");
+      const message = "Phone number is required.";
+      setError(message);
+      toast({
+        title: "Missing phone number",
+        description: message,
+        variant: "destructive",
+      });
       setSaving(false);
       return;
     }
@@ -245,9 +272,18 @@ export default function AdminFlaggedNumbersPage() {
         .eq("id", form.id);
       if (error) {
         setError(error.message);
+        toast({
+          title: "Unable to update flagged number",
+          description: error.message,
+          variant: "destructive",
+        });
       } else {
         await load(page);
         resetForm();
+        toast({
+          title: "Flagged number updated",
+          description: "Changes saved successfully.",
+        });
       }
     } else {
       const { error } = await supabase
@@ -255,11 +291,20 @@ export default function AdminFlaggedNumbersPage() {
         .insert([payload]);
       if (error) {
         setError(error.message);
+        toast({
+          title: "Unable to add flagged number",
+          description: error.message,
+          variant: "destructive",
+        });
       } else {
         // after insert, go back to first page to ensure new is visible at top
         setPage(1);
         await load(1);
         resetForm();
+        toast({
+          title: "Flagged number added",
+          description: "The new entry is now visible at the top of the list.",
+        });
       }
     }
 

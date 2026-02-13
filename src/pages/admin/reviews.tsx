@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { toast } from "@/hooks/use-toast";
 
 interface ReviewRow {
   id: string;
@@ -55,7 +55,6 @@ const AdminReviewsPage: NextPage = () => {
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
-  const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<string | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -145,6 +144,11 @@ const AdminReviewsPage: NextPage = () => {
         ...prev,
         [review.id]: "Could not update status. Try again.",
       }));
+      toast({
+        title: "Status update failed",
+        description: "Could not update the review status.",
+        variant: "destructive",
+      });
     }
 
     setSavingId(null);
@@ -178,6 +182,11 @@ const AdminReviewsPage: NextPage = () => {
           review.id === reviewId ? { ...review, status: previousStatus } : review
         )
       );
+      toast({
+        title: "Status update failed",
+        description: "Could not update the review status.",
+        variant: "destructive",
+      });
     }
 
     setSavingIds((prev) => prev.filter((id) => id !== reviewId));
@@ -207,15 +216,25 @@ const AdminReviewsPage: NextPage = () => {
       .in("id", selectedIds);
 
     if (error) {
-      setBulkError("Could not update selected reviews. Changes reverted.");
+      const message = "Could not update selected reviews. Changes reverted.";
+      setBulkError(message);
       setReviews((prev) =>
         prev.map((r) => ({
           ...r,
           status: prevById.get(r.id) ?? r.status,
         }))
       );
+      toast({
+        title: "Bulk update failed",
+        description: message,
+        variant: "destructive",
+      });
     } else {
       setSelectedIds([]);
+      toast({
+        title: "Reviews updated",
+        description: `Updated ${selectedIds.length} review(s).`,
+      });
     }
 
     setBulkSaving(false);
@@ -254,17 +273,29 @@ const AdminReviewsPage: NextPage = () => {
     }
   };
 
- const confirmDelete = async (id: string) => {
-  setDeletingId(id);
-  const { error } = await supabase.from("reviews").delete().eq("id", id);
-  if (!error) {
-    await refreshPage(page);
-  }
-  setDeletingId(null);
-};
-const handleDelete = (id: string) => {
-  setDeleteIdToConfirm(id);
-};
+  const handleDelete = async (id: string) => {
+    const confirmed = window.confirm(
+      "Delete this review? This action cannot be undone."
+    );
+    if (!confirmed) return;
+
+    setDeletingId(id);
+    const { error } = await supabase.from("reviews").delete().eq("id", id);
+    if (error) {
+      toast({
+        title: "Delete failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      await refreshPage(page);
+      toast({
+        title: "Review deleted",
+        description: "The review was removed successfully.",
+      });
+    }
+    setDeletingId(null);
+  };
 
   const handleFilterByBusiness = (name: string) => {
     setSearch(name);
@@ -633,17 +664,6 @@ const handleDelete = (id: string) => {
             </div>
           </section>
         </div>
-        <ConfirmDialog
-          isOpen={deleteIdToConfirm !== null}
-          onOpenChange={(open) => !open && setDeleteIdToConfirm(null)}
-          title="Delete Review"
-          description="Delete this review? This action cannot be undone."
-          onConfirm={() => {
-            const id = deleteIdToConfirm;
-            setDeleteIdToConfirm(null);
-            if (id) confirmDelete(id);
-          }}
-        />
       </main>
     </>
   );
