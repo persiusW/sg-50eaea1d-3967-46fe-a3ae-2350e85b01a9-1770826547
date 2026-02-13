@@ -564,6 +564,7 @@ const AdminBusinessesPage: NextPage = () => {
                                             </Button>
                                         )}
                                     </div>
+                                </div>  {/* CLOSES the main input wrapper */}
                             </form>
                         </div>
                         <div className="space-y-3 rounded-lg border border-border bg-card p-4">
