@@ -213,9 +213,11 @@ const AdminBusinessesPage: NextPage = () => {
     };
     const startEdit = (biz: Business) => {
         setEditingId(biz.id);
+
         const matchedCategory = categoryOptions.find(
             (opt) => opt.toLowerCase() === (biz.category || "").toLowerCase(),
         );
+
         setForm({
             name: biz.name,
             phone: biz.phone,
@@ -228,8 +230,9 @@ const AdminBusinessesPage: NextPage = () => {
             createdByAdmin: true,
             platforms: biz.platforms ?? [],
             otherPlatform: "",
-            setFormError(null),
         });
+
+        setFormError(null);
     };
     const handleFormChange = (
         field: keyof BusinessFormState,
