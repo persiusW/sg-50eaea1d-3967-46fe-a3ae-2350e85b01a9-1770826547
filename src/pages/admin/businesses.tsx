@@ -161,26 +161,6 @@ const AdminBusinessesPage: NextPage = () => {
         };
         void checkAuth();
     }, [router]);
-    const fetchBusinessesPage = async (pageToLoad: number) => {
-        setLoading(true);
-        const from = (pageToLoad - 1) * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
-        const { data, error } = await supabase
-            .from("businesses")
-            .select(
-                "id,name,phone,location,branches_count,category,status,verified,created_at",
-            )
-            .order("created_at", { ascending: false })
-            .range(from, to);
-        if (!error && data) {
-            setBusinesses(data as Business[]);
-            setHasMore(data.length === PAGE_SIZE);
-        } else {
-            setBusinesses([]);
-            setHasMore(false);
-        }
-        setLoading(false);
-    };
     useEffect(() => {
         const loadCategories = async () => {
             const { data, error } = await supabase
@@ -194,62 +174,62 @@ const AdminBusinessesPage: NextPage = () => {
                             .filter((c): c is string => !!c && c.length > 0),
                     ),
                 )
-        )
-      : [];
-const all = [...TOP_CATEGORIES, ...existing];
-const uniqueByLower = new Map < string, string> ();
-for (const cat of all) {
-    const key = cat.toLowerCase();
-    if (!uniqueByLower.has(key)) {
-        uniqueByLower.set(key, cat);
-    }
-}
-setCategoryOptions(Array.from(uniqueByLower.values()));
-    };
-void loadCategories();
-  }, []);
-useEffect(() => {
-    if (checkingAuth) return;
-    void fetchBusinessesPage(page);
-}, [checkingAuth, page]);
-const resetForm = () => {
-    setForm({
-        name: "",
-        phone: "",
-        location: "",
-        branchesCount: "",
-        category: "",
-        status: "",
-        verified: false,
-        createdByAdmin: true,
-        platforms: [],
-        otherPlatform: "",
-        customCategory: "",
-    });
-    setEditingId(null);
-    setFormError(null);
-};
-const startCreate = () => {
-    resetForm();
-};
-const startEdit = (biz: Business) => {
-    setEditingId(biz.id);
-    const matchedCategory = categoryOptions.find(
-        (opt) => opt.toLowerCase() === (biz.category || "").toLowerCase(),
-    );
-    setForm({
-        name: biz.name,
-        phone: biz.phone,
-        location: biz.location ?? "",
-        branchesCount: biz.branches_count ? String(biz.branches_count) : "",
-        category: matchedCategory || OTHER_VALUE,
-        customCategory: matchedCategory ? "" : biz.category || "",
-        status: biz.status ?? "",
-        verified: biz.verified,
-        createdByAdmin: true,
-        platforms: biz.platforms ?? [],
-        otherPlatform: "",
+                : [];
+            const all = [...TOP_CATEGORIES, ...existing];
+            const uniqueByLower = new Map < string, string> ();
+            for (const cat of all) {
+                const key = cat.toLowerCase();
+                if (!uniqueByLower.has(key)) {
+                    uniqueByLower.set(key, cat);
+                }
+            }
+            setCategoryOptions(Array.from(uniqueByLower.values()));
+        };
+        void loadCategories();
+    }, []);
+    useEffect(() => {
+        if (checkingAuth) return;
+        void fetchBusinessesPage(page);
+    }, [checkingAuth, page]);
+    const resetForm = () => {
+        setForm({
+            name: "",
+            phone: "",
+            location: "",
+            branchesCount: "",
+            category: "",
+            status: "",
+            verified: false,
+            createdByAdmin: true,
+            platforms: [],
+            otherPlatform: "",
+            customCategory: "",
+        });
+        setEditingId(null);
         setFormError(null);
+    };
+    const startCreate = () => {
+        resetForm();
+    };
+    const startEdit = (biz: Business) => {
+        setEditingId(biz.id);
+        const matchedCategory = categoryOptions.find(
+            (opt) => opt.toLowerCase() === (biz.category || "").toLowerCase(),
+        );
+        setForm({
+            name: biz.name,
+            phone: biz.phone,
+            location: biz.location ?? "",
+            branchesCount: biz.branches_count ? String(biz.branches_count) : "",
+            category: matchedCategory || OTHER_VALUE,
+            customCategory: matchedCategory ? "" : biz.category || "",
+            status: biz.status ?? "",
+            verified: biz.verified,
+            createdByAdmin: true,
+            platforms: biz.platforms ?? [],
+            otherPlatform: "",
+            setFormError(null),
+        });
     };
     const handleFormChange = (
         field: keyof BusinessFormState,
@@ -495,37 +475,6 @@ const startEdit = (biz: Business) => {
                                                 required
                                             />
                                         )}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="status">Status (optional)</Label>
-                                        <Select
-                                            value={form.status}
-                                            onValueChange={(value) =>
-                                                setForm((prev) => ({ ...prev, status: value ?? "" }))
-                                            }
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select status" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="">No status</SelectItem>
-                                                <SelectItem value="UNDER_REVIEW">
-                                                    Under Review
-                                                </SelectItem>
-                                                <SelectItem value="MULTIPLE_REPORTS">
-                                                    Multiple Independent Reports
-                                                </SelectItem>
-                                                <SelectItem value="PATTERN_MATCH_SCAM">
-                                                    Pattern Match: Known Scam Method
-                                                </SelectItem>
-                                                <SelectItem value="VERIFIED">
-                                                    Verified
-                                                </SelectItem>
-                                                <SelectItem value="SCAM">
-                                                    Confirmed Scam
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Label
