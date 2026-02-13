@@ -1,14 +1,15 @@
 import { useToast } from "@/hooks/use-toast";
-// In your component:
-const { toast } = useToast();
-// Success toast:
-toast({
-    title: "Success!",
-    description: "Operation completed",
-});
-// Error toast:
-toast({
-    title: "Error",
-    description: "Something went wrong",
-    variant: "destructive",
-});
+
+export function useToastHelper() {
+    const { toast } = useToast();
+
+    const success = (description: string, title = "Success!") => {
+        toast({ title, description });
+    };
+
+    const error = (description: string, title = "Error") => {
+        toast({ title, description, variant: "destructive" });
+    };
+
+    return { success, error, toast };
+}
