@@ -194,6 +194,7 @@ const AdminBusinessesPage: NextPage = () => {
                             .filter((c): c is string => !!c && c.length > 0)
                     ),
                 )
+                )
         )
       : [];
 const all = [...TOP_CATEGORIES, ...existing];
