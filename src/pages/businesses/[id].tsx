@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusLegend } from "@/components/StatusLegend";
 import { PublicNav } from "@/components/PublicNav";
+import { ListSkeleton } from "@/components/skeletons/AppSkeletons";
 
 type BusinessStatus =
 "UNDER_REVIEW" |
@@ -376,10 +377,22 @@ const BusinessDetailPage: NextPage = () => {
 
           <StatusLegend className="max-w-2xl" />
 
-          {loading ?
-          <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-              Loading business…
-            </div> :
+          {loading ? (
+            <div className="flex min-h-[200px] items-center justify-center">
+              <div className="w-full max-w-md space-y-3">
+                <div className="h-8 w-48 rounded-md bg-accent animate-pulse" />
+                <div className="space-y-2">
+                  <div className="h-4 w-32 rounded-md bg-accent animate-pulse" />
+                  <div className="h-4 w-40 rounded-md bg-accent animate-pulse" />
+                  <div className="h-4 w-36 rounded-md bg-accent animate-pulse" />
+                </div>
+                <div className="flex gap-2">
+                  <div className="h-9 w-32 rounded-md bg-accent animate-pulse" />
+                  <div className="h-9 w-24 rounded-md bg-accent animate-pulse" />
+                </div>
+              </div>
+            </div>
+          ) : (
           loadError ?
           <div className="rounded-lg border border-destructive bg-destructive/5 p-4 text-sm text-destructive-foreground">
               {loadError}
@@ -632,13 +645,10 @@ Please keep contributions respectful, factual, and constructive.
                   </div>
 
                   {loadingReviews ? (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      Loading reviews…
-                    </p>
+                    <ListSkeleton count={6} />
                   ) : reviews.length === 0 ? (
                     <p className="mt-3 text-xs text-muted-foreground">
-                      No reviews yet. Be the first to share your
-                      experience.
+                      No reviews yet. Be the first to share your experience.
                     </p>
                   ) : (
                     <div className="mt-3 space-y-3 text-xs">
