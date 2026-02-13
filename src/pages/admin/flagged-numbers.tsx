@@ -5,6 +5,7 @@ import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminNav } from "@/components/AdminNav";
 import { toast } from "@/hooks/use-toast";
+import { AdminTableSkeleton } from "@/components/admin/AdminSkeletons";
 
 type FlagStatus =
   | "UNDER_REVIEW"
@@ -475,10 +476,10 @@ export default function AdminFlaggedNumbersPage() {
 
             <div className="rounded-lg border border-border bg-card p-4 text-sm">
               <h2 className="text-sm font-semibold">Existing flagged numbers</h2>
-              {loading ? (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Loading…
-                </p>
+              {loading && items.length === 0 ? (
+                <div className="mt-3">
+                  <AdminTableSkeleton rows={8} cols={4} />
+                </div>
               ) : items.length === 0 ? (
                 <p className="mt-2 text-xs text-muted-foreground">
                   No flagged numbers yet.
