@@ -7,6 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
 import { toast } from "@/hooks/use-toast";
+import {
+  AdminAuthSkeleton,
+  AdminTableSkeleton,
+  AdminReviewCardSkeleton,
+} from "@/components/admin/AdminSkeletons";
 
 interface ReviewRow {
   id: string;
@@ -330,11 +335,7 @@ const AdminReviewsPage: NextPage = () => {
           title="Admin reviews – Transparent Turtle"
           description="Moderate reviews in the Transparent Turtle admin dashboard."
         />
-        <main className="min-h-screen bg-background text-foreground">
-          <div className="container flex min-h-screen items-center justify-center">
-            <p className="text-sm text-muted-foreground">Checking access…</p>
-          </div>
-        </main>
+        <AdminAuthSkeleton />
       </>
     );
   }
@@ -450,7 +451,13 @@ const AdminReviewsPage: NextPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {reviews.length === 0 ? (
+                  {loading && reviews.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-0">
+                        <AdminTableSkeleton rows={8} cols={7} />
+                      </td>
+                    </tr>
+                  ) : reviews.length === 0 ? (
                     <tr>
                       <td
                         colSpan={7}
@@ -584,7 +591,9 @@ const AdminReviewsPage: NextPage = () => {
 
             {/* Mobile/card view */}
             <div className="space-y-3 sm:hidden">
-              {reviews.length === 0 ? (
+              {loading && reviews.length === 0 ? (
+                <AdminReviewCardSkeleton />
+              ) : reviews.length === 0 ? (
                 <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
                   No reviews yet.
                 </div>

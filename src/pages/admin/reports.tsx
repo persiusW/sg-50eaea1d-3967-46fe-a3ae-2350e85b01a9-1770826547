@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { AdminReportRowSkeleton } from "@/components/admin/AdminSkeletons";
 
 interface ScamReportRow {
   id: string;
@@ -485,9 +486,13 @@ const AdminReportsPage: NextPage = () => {
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4">
         <header className="flex items-center justify-between gap-2">
           <h1 className="text-base font-semibold tracking-tight">Scam reports</h1>
-          <p className="text-xs text-muted-foreground">
-            {loading ? "Loading…" : `${totalCount} reports`}
-          </p>
+          {loading ? (
+            <div className="h-4 w-20 rounded bg-accent animate-pulse" />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {totalCount} reports
+            </p>
+          )}
         </header>
 
         {convertError && (
@@ -511,7 +516,10 @@ const AdminReportsPage: NextPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60 text-xs">
-              {reports.map((report) => {
+              {loading && reports.length === 0 ? (
+                <AdminReportRowSkeleton rows={8} />
+              ) : (
+                reports.map((report) => {
                 const isExpanded = expandedReportId === report.id;
                 const businessName =
                   report.connected_page?.trim() ||
@@ -749,7 +757,7 @@ const AdminReportsPage: NextPage = () => {
                     )}
                   </React.Fragment>
                 );
-              })}
+              }))}
               {!loading && reports.length === 0 && (
                 <tr>
                   <td

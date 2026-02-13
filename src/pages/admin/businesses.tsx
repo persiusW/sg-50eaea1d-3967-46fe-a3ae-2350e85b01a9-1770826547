@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
 import { toast } from "@/hooks/use-toast";
+import { AdminAuthSkeleton, AdminTableSkeleton } from "@/components/admin/AdminSkeletons";
 
 const TOP_CATEGORIES: string[] = [
     "Restaurant",
@@ -434,11 +435,7 @@ const AdminBusinessesPage: NextPage = () => {
                     title="Admin businesses – Transparent Turtle"
                     description="Manage businesses in the Transparent Turtle admin dashboard."
                 />
-                <main className="min-h-screen bg-background text-foreground">
-                    <div className="container flex min-h-screen items-center justify-center">
-                        <p className="text-sm text-muted-foreground">Checking access…</p>
-                    </div>
-                </main>
+                <AdminAuthSkeleton />
             </>
         );
     }
@@ -734,7 +731,13 @@ const AdminBusinessesPage: NextPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {businesses.length === 0 ? (
+                                        {loading && businesses.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="p-0">
+                                                    <AdminTableSkeleton rows={8} cols={7} />
+                                                </td>
+                                            </tr>
+                                        ) : businesses.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan={7}
