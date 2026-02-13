@@ -150,6 +150,33 @@ const AdminBusinessesPage: NextPage = () => {
         const all = trimmedOther.length > 0 ? [...base, trimmedOther] : base;
         return all.length > 0 ? all : null;
     };
+    const fetchBusinessesPage = async (pageNum: number) => {
+        setLoading(true);
+
+        const from = (pageNum - 1) * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+
+        const { data, error } = await supabase
+            .from("businesses")
+            .select(
+                "id,name,phone,location,branches_count,category,status,verified,created_at,platforms"
+            )
+            .order("created_at", { ascending: false })
+            .range(from, to);
+
+        if (error) {
+            setLoading(false);
+            setBusinesses([]);
+            setHasMore(false);
+            setFormError("Failed to load businesses.");
+            return;
+        }
+
+        const rows = (data ?? []) as Business[];
+        setBusinesses(rows);
+        setHasMore(rows.length === PAGE_SIZE);
+        setLoading(false);
+    };
     useEffect(() => {
         const checkAuth = async () => {
             const session = await authService.getCurrentSession();
