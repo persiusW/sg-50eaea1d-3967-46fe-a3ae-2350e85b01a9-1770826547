@@ -191,7 +191,7 @@ const AdminBusinessesPage: NextPage = () => {
                     new Set(
                         (data as { category: string | null }[])
                             .map((row) => row.category?.trim())
-                            .filter((c): c is string => !!c && c.length > 0),
+                            .filter((c): c is string => !!c && c.length > 0)
                     ),
                 )
         )
