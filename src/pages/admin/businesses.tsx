@@ -682,8 +682,8 @@ const AdminBusinessesPage: NextPage = () => {
                                 configured with cascading deletes on reviews table.
                             </p>
                         </div>
+                    </section>
                 </div>
-            </section>
         </div >
       </main >
     <ConfirmDialog
