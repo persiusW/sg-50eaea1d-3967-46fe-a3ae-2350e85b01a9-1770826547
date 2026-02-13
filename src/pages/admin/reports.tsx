@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { NextPage } from "next";
 import { AdminNav } from "@/components/AdminNav";
-import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -58,7 +57,6 @@ const AdminReportsPage: NextPage = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
-  const { toast } = useToast();
   const [businessSearchTerm, setBusinessSearchTerm] = useState("");
   const [businessSearchResults, setBusinessSearchResults] = useState<
     { id: string; name: string; phone: string | null }[]
@@ -132,17 +130,10 @@ const AdminReportsPage: NextPage = () => {
       .eq("id", reportId);
 
     if (error) {
-  toast({
-    title: "Error",
-    description: "Failed to update report status.",
-    variant: "destructive",
-  });
-} else {
-  toast({
-    title: "Success!",
-    description: "Report status updated successfully.",
-  });
-}
+      console.error("Failed to update report status", error);
+      setStatusUpdatingId(null);
+      return;
+    }
 
     setReports((prev) =>
       prev.map((r) => (r.id === reportId ? { ...r, status: newStatus } : r)),

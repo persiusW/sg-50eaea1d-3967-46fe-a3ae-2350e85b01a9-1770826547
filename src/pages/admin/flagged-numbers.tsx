@@ -4,7 +4,6 @@ import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminNav } from "@/components/AdminNav";
-import { useToast } from "@/hooks/use-toast";
 
 type FlagStatus =
   | "UNDER_REVIEW"
@@ -98,7 +97,6 @@ export default function AdminFlaggedNumbersPage() {
   });
 
   const [page, setPage] = useState(1);
-  const { toast } = useToast();
   const [isLastPage, setIsLastPage] = useState(false);
   const [loadingPage, setLoadingPage] = useState(false);
   const [rowErrors, setRowErrors] = useState<FlaggedErrorState>({});
@@ -167,26 +165,16 @@ export default function AdminFlaggedNumbersPage() {
     setError(null);
   };
 
-   const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string) => {
     setSaving(true);
     setError(null);
     const { error } = await supabase
       .from("flagged_numbers")
       .delete()
       .eq("id", id);
-    
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete flagged number. Please try again.",
-        variant: "destructive",
-      });
       setError(error.message);
     } else {
-      toast({
-        title: "Success!",
-        description: "Flagged number deleted successfully.",
-      });
       // reload current page to keep context
       await load(page);
       if (form.id === id) {
@@ -199,38 +187,41 @@ export default function AdminFlaggedNumbersPage() {
   const handleFlaggedStatusChange = async (rowId: string, nextStatus: FlagStatus) => {
     setRowErrors((prev) => ({ ...prev, [rowId]: null }));
     setSavingIds((prev) => [...prev, rowId]);
+
     setItems((prev) =>
       prev.map((row) =>
         row.id === rowId ? { ...row, status: nextStatus } : row
       )
     );
+
+    const target = items.find((r) => r.id === rowId);
+    const previousStatus = target?.status ?? null;
+
     const { error } = await supabase
       .from("flagged_numbers")
       .update({ status: nextStatus })
       .eq("id", rowId);
+
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update flagged number status.",
-        variant: "destructive",
-      });
       setRowErrors((prev) => ({
         ...prev,
-          [rowId]: "Failed to update status. Try again.",
+        [rowId]: "Could not update status.",
       }));
-    } else {
-      toast({
-        title: "Success!",
-        description: "Flagged number status updated successfully.",
-      });
+      setItems((prev) =>
+        prev.map((row) =>
+          row.id === rowId ? { ...row, status: previousStatus || "UNDER_REVIEW" } : row
+        )
+      );
     }
-      setSavingIds((prev) => prev.filter((savingId) => savingId !== rowId));
+
+    setSavingIds((prev) => prev.filter((id) => id !== rowId));
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError(null);
+
     const normalizedPhone = normalizePhone(form.phone);
     const payload = {
       phone: normalizedPhone,
@@ -240,57 +231,38 @@ export default function AdminFlaggedNumbersPage() {
       status: form.status,
       verified: true,
     };
+
     if (!payload.phone) {
       setError("Phone number is required.");
       setSaving(false);
       return;
     }
+
     if (form.id) {
       const { error } = await supabase
         .from("flagged_numbers")
         .update(payload)
         .eq("id", form.id);
-      
       if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to update flagged number.",
-          variant: "destructive",
-        });
         setError(error.message);
       } else {
-        toast({
-          title: "Success!",
-          description: "Flagged number updated successfully.",
-        });
-        // after update, go back to first page to ensure new is visible at top
-        setPage(1);
-        await load(1);
+        await load(page);
         resetForm();
       }
     } else {
       const { error } = await supabase
         .from("flagged_numbers")
         .insert([payload]);
-      
       if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to add flagged number.",
-          variant: "destructive",
-        });
         setError(error.message);
       } else {
-        toast({
-          title: "Success!",
-          description: "Flagged number added successfully.",
-        });
         // after insert, go back to first page to ensure new is visible at top
         setPage(1);
         await load(1);
         resetForm();
       }
     }
+
     setSaving(false);
   };
 
