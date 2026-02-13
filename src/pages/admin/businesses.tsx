@@ -193,9 +193,9 @@ const AdminBusinessesPage: NextPage = () => {
                             .map((row) => row.category?.trim())
                             .filter((c): c is string => !!c && c.length > 0),
                     ),
-                ),
-        );
-        : [];
+                )
+        )
+      : [];
 const all = [...TOP_CATEGORIES, ...existing];
 const uniqueByLower = new Map < string, string> ();
 for (const cat of all) {
