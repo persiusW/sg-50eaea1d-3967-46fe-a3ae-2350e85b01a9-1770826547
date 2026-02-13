@@ -15,6 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
+import { useToast } from "@/hooks/use-toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const TOP_CATEGORIES: string[] = [
@@ -139,6 +140,7 @@ const AdminBusinessesPage: NextPage = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const { toast } = useToast();
 
   const handlePlatformToggle = (platform: string) => {
     setForm((prev) => {
@@ -366,20 +368,42 @@ const AdminBusinessesPage: NextPage = () => {
       error = insertError;
     }
 
-    if (error) {
+if (error) {
+      toast({
+        title: "Failed to save business",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
       setFormError("Failed to save business. Please try again.");
       setSaving(false);
       return;
     }
-
+    toast({
+      title: "Success!",
+      description: editingId ? "Business updated successfully." : "Business created successfully.",
+    });
     await fetchBusinessesPage(page);
     resetForm();
     setSaving(false);
-  };
+
 
 const confirmDelete = async (id: string) => {
   setDeletingId(id);
-  await supabase.from("businesses").delete().eq("id", id);
+  const { error } = await supabase.from("businesses").delete().eq("id", id);
+  
+  if (error) {
+    toast({
+      title: "Error",
+      description: "Failed to delete business. Please try again.",
+      variant: "destructive",
+    });
+  } else {
+    toast({
+      title: "Success!",
+      description: "Business deleted successfully.",
+    });
+  }
+  
   await fetchBusinessesPage(page);
   setDeletingId(null);
 };

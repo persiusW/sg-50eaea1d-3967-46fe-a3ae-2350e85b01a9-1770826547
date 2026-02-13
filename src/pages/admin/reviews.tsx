@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
+import { useToast } from "@/hooks/use-toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface ReviewRow {
@@ -52,6 +53,7 @@ const AdminReviewsPage: NextPage = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [rowErrors, setRowErrors] = useState<ReviewErrorState>({});
+  const { toast } = useToast();
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
@@ -136,18 +138,27 @@ const AdminReviewsPage: NextPage = () => {
       .eq("id", review.id);
 
     if (error) {
-      setReviews((prev) =>
-        prev.map((r) =>
-          r.id === review.id ? { ...r, status: previous } : r
-        )
-      );
-      setStatusErrors((prev) => ({
-        ...prev,
-        [review.id]: "Could not update status. Try again.",
-      }));
-    }
-
-    setSavingId(null);
+    toast({
+      title: "Error",
+      description: "Failed to update review status.",
+      variant: "destructive",
+    });
+    setReviews((prev) =>
+      prev.map((r) =>
+        r.id === review.id ? { ...r, status: previous } : r
+      )
+    );
+    setStatusErrors((prev) => ({
+      ...prev,
+      [review.id]: "Could not update status. Try again.",
+    }));
+  } else {
+    toast({
+      title: "Success!",
+      description: "Review status updated successfully.",
+    });
+  }
+  setSavingId(null);
   };
 
   const handleStatusQuickChange = async (reviewId: string, nextStatus: string) => {
@@ -169,18 +180,27 @@ const AdminReviewsPage: NextPage = () => {
       .eq("id", reviewId);
 
     if (error) {
-      setRowErrors((prev) => ({
-        ...prev,
-        [reviewId]: "Could not update status.",
-      }));
-      setReviews((prev) =>
-        prev.map((review) =>
-          review.id === reviewId ? { ...review, status: previousStatus } : review
-        )
-      );
-    }
-
-    setSavingIds((prev) => prev.filter((id) => id !== reviewId));
+    toast({
+      title: "Error",
+      description: "Failed to update review status.",
+      variant: "destructive",
+    });
+    setRowErrors((prev) => ({
+      ...prev,
+      [reviewId]: "Could not update status.",
+    }));
+    setReviews((prev) =>
+      prev.map((review) =>
+        review.id === reviewId ? { ...review, status: previousStatus } : review
+      )
+    );
+  } else {
+    toast({
+      title: "Success!",
+      description: "Review status updated successfully.",
+    });
+  }
+  setSavingIds((prev) => prev.filter((id) => id !== reviewId));
   };
 
   const handleBulkUpdateReviewStatus = async (nextStatus: ReviewStatus) => {
@@ -206,19 +226,28 @@ const AdminReviewsPage: NextPage = () => {
       .update({ status: nextValue })
       .in("id", selectedIds);
 
-    if (error) {
-      setBulkError("Could not update selected reviews. Changes reverted.");
-      setReviews((prev) =>
-        prev.map((r) => ({
-          ...r,
-          status: prevById.get(r.id) ?? r.status,
-        }))
-      );
-    } else {
-      setSelectedIds([]);
-    }
-
-    setBulkSaving(false);
+   if (error) {
+    toast({
+      title: "Error",
+      description: "Could not update selected reviews. Changes reverted.",
+      variant: "destructive",
+    });
+    setBulkError("Could not update selected reviews. Changes reverted.");
+    setReviews((prev) =>
+      prev.map((r) => ({
+        ...r,
+        status: prevById.get(r.id) ?? r.status,
+      }))
+    );
+  } else {
+    const count = selectedIds.length;
+    toast({
+      title: "Success!",
+      description: `${count} review${count === 1 ? '' : 's'} updated successfully.`,
+    });
+    setSelectedIds([]);
+  }
+  setBulkSaving(false);
   };
 
   const refreshPage = async (pageToLoad: number) => {
@@ -257,6 +286,20 @@ const AdminReviewsPage: NextPage = () => {
  const confirmDelete = async (id: string) => {
   setDeletingId(id);
   const { error } = await supabase.from("reviews").delete().eq("id", id);
+  
+  if (error) {
+    toast({
+      title: "Error",
+      description: "Failed to delete review. Please try again.",
+      variant: "destructive",
+    });
+  } else {
+    toast({
+      title: "Success!",
+      description: "Review deleted successfully.",
+    });
+  }
+  
   if (!error) {
     await refreshPage(page);
   }
