@@ -403,6 +403,9 @@ const AdminBusinessesPage: NextPage = () => {
         setSaving(false);
     };
 
+    const handleDelete = (id: string) => {
+        setDeleteIdToConfirm(id);
+    };
     const confirmDelete = async () => {
         const id = deleteIdToConfirm;
         if (!id) return;
