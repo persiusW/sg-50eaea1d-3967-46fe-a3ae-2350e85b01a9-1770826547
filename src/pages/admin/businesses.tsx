@@ -15,7 +15,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
-import { toast } from "@/hooks/use-toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/hooks/use-toast";
 import { AdminAuthSkeleton, AdminTableSkeleton } from "@/components/admin/AdminSkeletons";
 
 const TOP_CATEGORIES: string[] = [
@@ -117,9 +118,10 @@ const PAGE_SIZE = 25;
 const AdminBusinessesPage: NextPage = () => {
     const router = useRouter();
     const [checkingAuth, setCheckingAuth] = useState(true);
-    const [businesses, setBusinesses] = useState < Business[] > ([]);
+    const [businesses, setBusinesses] = useState<Business[]>([]);
     const [loading, setLoading] = useState(false);
-    const [form, setForm] = useState < BusinessFormState > ({
+    const { toast } = useToast();
+    const [form, setForm] = useState<BusinessFormState>({
         name: "",
         phone: "",
         location: "",
@@ -132,13 +134,15 @@ const AdminBusinessesPage: NextPage = () => {
         otherPlatform: "",
         customCategory: "",
     });
-    const [editingId, setEditingId] = useState < string | null > (null);
-    const [formError, setFormError] = useState < string | null > (null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
+
     const [saving, setSaving] = useState(false);
-    const [deletingId, setDeletingId] = useState < string | null > (null);
+    const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
-    const [categoryOptions, setCategoryOptions] = useState < string[] > ([]);
+    const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
 
     const handlePlatformToggle = (platform: string) => {
         setForm((prev) => {
@@ -218,7 +222,7 @@ const AdminBusinessesPage: NextPage = () => {
 
             const all = [...TOP_CATEGORIES, ...existing];
 
-            const uniqueByLower = new Map < string, string> ();
+            const uniqueByLower = new Map<string, string>();
             for (const cat of all) {
                 const key = cat.toLowerCase();
                 if (!uniqueByLower.has(key)) {
@@ -399,28 +403,30 @@ const AdminBusinessesPage: NextPage = () => {
         setSaving(false);
     };
 
-    const handleDelete = async (id: string) => {
-        const confirmed = window.confirm(
-            "Delete this business? This will also remove its reviews.",
-        );
-        if (!confirmed) return;
+    const confirmDelete = async () => {
+        const id = deleteIdToConfirm;
+        if (!id) return;
 
         setDeletingId(id);
+
         const { error } = await supabase.from("businesses").delete().eq("id", id);
+
         if (error) {
             toast({
                 title: "Delete failed",
-                description: error.message,
+                description: error.message || "Could not delete business.",
                 variant: "destructive",
             });
         } else {
-            await fetchBusinessesPage(page);
             toast({
                 title: "Business deleted",
                 description: "The business was removed successfully.",
             });
+            await fetchBusinessesPage(page);
         }
+
         setDeletingId(null);
+        setDeleteIdToConfirm(null);
     };
 
     const handleSignOut = async () => {
@@ -838,6 +844,17 @@ const AdminBusinessesPage: NextPage = () => {
                         </div>
                     </section>
                 </div>
+                <ConfirmDialog
+                    isOpen={deleteIdToConfirm !== null}
+                    onOpenChange={(open) => {
+                        if (!open) setDeleteIdToConfirm(null);
+                    }}
+                    title="Delete Business"
+                    description="Delete this business? This will also remove its reviews."
+                    confirmText={deletingId ? "Deleting..." : "Delete"}
+                    confirmDisabled={Boolean(deletingId)}
+                    onConfirm={confirmDelete}
+                />
             </main>
         </>
     );
