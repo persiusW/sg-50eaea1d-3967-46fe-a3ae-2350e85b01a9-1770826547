@@ -27,3 +27,7 @@ export const ListSkeleton: React.FC<ListSkeletonProps> = ({ count = 10 }) => {
     </div>
   );
 };
+
+export const ReviewCardsListSkeleton: React.FC<ListSkeletonProps> = (props) => {
+  return <ListSkeleton {...props} />;
+};
