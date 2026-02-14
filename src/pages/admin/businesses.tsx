@@ -414,6 +414,9 @@ const AdminBusinessesPage: NextPage = () => {
 
         const { error } = await supabase.from("businesses").delete().eq("id", id);
 
+        setDeletingId(null);
+        setDeleteIdToConfirm(null); // close immediately
+
         if (error) {
             toast({
                 title: "Delete failed",
@@ -795,7 +798,7 @@ const AdminBusinessesPage: NextPage = () => {
                                                             type="button"
                                                             onClick={() => handleDelete(biz.id)}
                                                             className="text-xs text-destructive-foreground hover:underline disabled:opacity-50"
-                                                            disabled={deletingId === biz.id}
+                                                            disabled={Boolean(deletingId)}
                                                         >
                                                             {deletingId === biz.id
                                                                 ? "Deleting…"
