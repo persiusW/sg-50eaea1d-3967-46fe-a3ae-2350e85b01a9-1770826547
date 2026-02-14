@@ -68,7 +68,6 @@ const BusinessesPage: NextPage = () => {
       );
 
     const trimmed = search.trim();
-    setActiveQuery(trimmed);
 
     if (trimmed.length > 0) {
       baseQuery = baseQuery.or(
