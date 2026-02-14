@@ -327,11 +327,32 @@ const BusinessesPage: NextPage = () => {
               {loading && businesses.length === 0 ? (
                 <ListSkeleton count={6} />
               ) : showNoBusinessesYet ? (
-                <EmptyState message="No businesses yet. Add the first business record." />
+                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+                  <p>No businesses yet. Add the first business record.</p>
+                  <div className="mt-2">
+                    <Button asChild size="sm">
+                      <Link href="/businesses/add">Add a business</Link>
+                    </Button>
+                  </div>
+                </div>
               ) : showNoMatches ? (
-                <EmptyState message="No matches found. Try a different search or add a business." />
+                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+                  <p>No matches found. Try a different search or add a business.</p>
+                  <div className="mt-2">
+                    <Button asChild size="sm">
+                      <Link href="/businesses/add">Add a business</Link>
+                    </Button>
+                  </div>
+                </div>
               ) : businesses.length === 0 ? (
-                <EmptyState message="No businesses found. Try a different search." />
+                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+                  <p>No businesses found. Try a different search.</p>
+                  <div className="mt-2">
+                    <Button asChild size="sm">
+                      <Link href="/businesses/add">Add a business</Link>
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {businesses.map((biz) => (
@@ -357,11 +378,32 @@ const BusinessesPage: NextPage = () => {
               {loading && businesses.length === 0 ? (
                 <ListSkeleton count={8} />
               ) : showNoBusinessesYet ? (
-                <EmptyState message="No businesses yet. Add the first business record." />
+                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+                  <p>No businesses yet. Add the first business record.</p>
+                  <div className="mt-2">
+                    <Button asChild size="sm">
+                      <Link href="/businesses/add">Add a business</Link>
+                    </Button>
+                  </div>
+                </div>
               ) : showNoMatches ? (
-                <EmptyState message="No matches found. Try a different search or add a business." />
+                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+                  <p>No matches found. Try a different search or add a business.</p>
+                  <div className="mt-2">
+                    <Button asChild size="sm">
+                      <Link href="/businesses/add">Add a business</Link>
+                    </Button>
+                  </div>
+                </div>
               ) : businesses.length === 0 ? (
-                <EmptyState message="No businesses found. Try a different search." />
+                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+                  <p>No businesses found. Try a different search.</p>
+                  <div className="mt-2">
+                    <Button asChild size="sm">
+                      <Link href="/businesses/add">Add a business</Link>
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
                   {businesses.map((biz) => (
