@@ -8,13 +8,14 @@ import { StatusLegend } from "@/components/StatusLegend";
 import { BusinessSummaryCard } from "@/components/BusinessSummaryCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListSkeleton } from "@/components/skeletons/AppSkeletons";
 
 type BusinessStatus =
-"UNDER_REVIEW" |
-"MULTIPLE_REPORTS" |
-"PATTERN_MATCH_SCAM" |
-"VERIFIED" |
-"SCAM";
+  "UNDER_REVIEW" |
+  "MULTIPLE_REPORTS" |
+  "PATTERN_MATCH_SCAM" |
+  "VERIFIED" |
+  "SCAM";
 
 interface BusinessListItem {
   id: string;
@@ -46,6 +47,7 @@ const BusinessesPage: NextPage = () => {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [activeQuery, setActiveQuery] = useState("");
 
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
@@ -55,7 +57,7 @@ const BusinessesPage: NextPage = () => {
 
   const fetchBusinesses = async (search: string, pageToLoad: number) => {
     setLoading(true);
-
+    setBusinesses([]);
     const from = (pageToLoad - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -66,6 +68,8 @@ const BusinessesPage: NextPage = () => {
       );
 
     const trimmed = search.trim();
+    setActiveQuery(trimmed);
+    
     if (trimmed.length > 0) {
       baseQuery = baseQuery.or(
         `name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`
@@ -122,14 +126,19 @@ const BusinessesPage: NextPage = () => {
 
   useEffect(() => {
     void fetchBusinesses("", 1);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const trimmed = query.trim();
+    setActiveQuery(trimmed);
+
     const nextPage = 1;
     setPage(nextPage);
-    await fetchBusinesses(query, nextPage);
+
+    await fetchBusinesses(trimmed, nextPage);
   };
 
   const handleFilterChange = async (
@@ -151,14 +160,16 @@ const BusinessesPage: NextPage = () => {
 
     const nextPage = 1;
     setPage(nextPage);
-    await fetchBusinesses(query, nextPage);
+    const trimmed = query.trim();
+    setActiveQuery(trimmed);
+    await fetchBusinesses(trimmed, nextPage);
   };
 
   const handlePageChange = async (direction: "next" | "prev") => {
     const nextPage = direction === "next" ? page + 1 : page - 1;
     if (nextPage < 1) return;
     setPage(nextPage);
-    await fetchBusinesses(query, nextPage);
+    await fetchBusinesses(activeQuery, nextPage);
   };
 
   const showNoBusinessesYet =
@@ -299,9 +310,7 @@ const BusinessesPage: NextPage = () => {
             {/* Mobile list */}
             <div className="space-y-2 sm:hidden">
               {loading && businesses.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Loading businesses…
-                </p>
+                <ListSkeleton count={6} />
               ) : showNoBusinessesYet ? (
                 <p className="text-xs text-muted-foreground">
                   No businesses yet. Add the first business record.
@@ -337,9 +346,7 @@ const BusinessesPage: NextPage = () => {
             {/* Desktop list using cards */}
             <div className="hidden sm:block">
               {loading && businesses.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Loading businesses…
-                </p>
+                <ListSkeleton count={8} />
               ) : showNoBusinessesYet ? (
                 <p className="text-xs text-muted-foreground">
                   No businesses yet. Add the first business record.
