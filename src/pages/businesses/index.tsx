@@ -9,13 +9,21 @@ import { BusinessSummaryCard } from "@/components/BusinessSummaryCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ListSkeleton } from "@/components/skeletons/AppSkeletons";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type BusinessStatus =
-  "UNDER_REVIEW" |
-  "MULTIPLE_REPORTS" |
-  "PATTERN_MATCH_SCAM" |
-  "VERIFIED" |
-  "SCAM";
+  | "UNDER_REVIEW"
+  | "MULTIPLE_REPORTS"
+  | "PATTERN_MATCH_SCAM"
+  | "VERIFIED"
+  | "SCAM";
 
 interface BusinessListItem {
   id: string;
@@ -53,11 +61,14 @@ const BusinessesPage: NextPage = () => {
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [sortBy, setSortBy] = useState<SortOption>("NEWEST");
-  const [anyBusinessesExist, setAnyBusinessesExist] = useState<boolean | null>(null);
+  const [anyBusinessesExist, setAnyBusinessesExist] = useState<boolean | null>(
+    null
+  );
 
   const fetchBusinesses = async (search: string, pageToLoad: number) => {
     setLoading(true);
     setBusinesses([]);
+
     const from = (pageToLoad - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -68,11 +79,10 @@ const BusinessesPage: NextPage = () => {
       );
 
     const trimmed = search.trim();
+    setActiveQuery(trimmed);
 
     if (trimmed.length > 0) {
-      baseQuery = baseQuery.or(
-        `name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`
-      );
+      baseQuery = baseQuery.or(`name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`);
     }
 
     if (selectedCategory !== "ALL") {
@@ -90,9 +100,15 @@ const BusinessesPage: NextPage = () => {
     }
 
     if (sortBy === "HIGHEST_RATED") {
-      baseQuery = baseQuery.order("avg_rating", { ascending: false, nullsFirst: false });
+      baseQuery = baseQuery.order("avg_rating", {
+        ascending: false,
+        nullsFirst: false,
+      });
     } else if (sortBy === "MOST_REVIEWED") {
-      baseQuery = baseQuery.order("reviews_count", { ascending: false, nullsFirst: false });
+      baseQuery = baseQuery.order("reviews_count", {
+        ascending: false,
+        nullsFirst: false,
+      });
     } else {
       baseQuery = baseQuery.order("created_at", { ascending: false });
     }
@@ -149,7 +165,8 @@ const BusinessesPage: NextPage = () => {
     const newCategory = nextCategory === null ? selectedCategory : nextCategory;
     const newVerifiedOnly =
       nextVerifiedOnly === null ? verifiedOnly : nextVerifiedOnly;
-    const newStatus = nextStatusFilter === null ? statusFilter : nextStatusFilter;
+    const newStatus =
+      nextStatusFilter === null ? statusFilter : nextStatusFilter;
     const newSort = nextSortBy === null ? sortBy : nextSortBy;
 
     setSelectedCategory(newCategory);
@@ -159,8 +176,10 @@ const BusinessesPage: NextPage = () => {
 
     const nextPage = 1;
     setPage(nextPage);
+
     const trimmed = query.trim();
     setActiveQuery(trimmed);
+
     await fetchBusinesses(trimmed, nextPage);
   };
 
@@ -180,7 +199,6 @@ const BusinessesPage: NextPage = () => {
     !verifiedOnly &&
     statusFilter === "ALL";
 
-
   const showNoMatches =
     !loading &&
     businesses.length === 0 &&
@@ -190,11 +208,7 @@ const BusinessesPage: NextPage = () => {
       verifiedOnly ||
       statusFilter !== "ALL");
 
-  const EmptyState = ({
-    message,
-  }: {
-    message: string;
-  }) => (
+  const EmptyState = ({ message }: { message: string }) => (
     <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
       <p>{message}</p>
       <div className="mt-2">
@@ -219,7 +233,8 @@ const BusinessesPage: NextPage = () => {
               Search businesses
             </h1>
             <p className="text-sm text-muted-foreground">
-              Look up businesses by name or phone to see public reports and status signals.
+              Look up businesses by name or phone to see public reports and status
+              signals.
             </p>
           </header>
 
@@ -227,7 +242,10 @@ const BusinessesPage: NextPage = () => {
             <StatusLegend className="max-w-2xl" />
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <form onSubmit={handleSearch} className="flex flex-1 flex-col gap-2 sm:flex-row">
+              <form
+                onSubmit={handleSearch}
+                className="flex flex-1 flex-col gap-2 sm:flex-row"
+              >
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -243,82 +261,92 @@ const BusinessesPage: NextPage = () => {
               </Button>
             </div>
 
+            {/* Filters */}
             <div className="flex flex-col gap-2 rounded-md border border-border bg-card/50 p-3 text-xs sm:flex-row sm:items-center sm:justify-between sm:text-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Category */}
+                <div className="flex items-center gap-2">
                   <span className="text-[11px] sm:text-xs">Category</span>
-                  <select
+                  <Select
                     value={selectedCategory}
-                    onChange={(e) =>
-                      void handleFilterChange(e.target.value, null, null, null)
+                    onValueChange={(value) =>
+                      void handleFilterChange(value, null, null, null)
                     }
-                    className="rounded border border-border bg-background px-1.5 py-0.5 text-[11px] sm:text-xs"
                   >
-                    <option value="ALL">All</option>
-                    <option value="Health / Clinic">Health / Clinic</option>
-                    <option value="Retail">Retail</option>
-                    <option value="Online Store">Online Store</option>
-                    <option value="Service">Service</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </label>
+                    <SelectTrigger className="h-8 w-[180px] text-[11px] sm:text-xs">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All</SelectItem>
+                      <SelectItem value="Health / Clinic">Health / Clinic</SelectItem>
+                      <SelectItem value="Retail">Retail</SelectItem>
+                      <SelectItem value="Online Store">Online Store</SelectItem>
+                      <SelectItem value="Service">Service</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
+                {/* Verified */}
+                <div className="flex items-center gap-2">
+                  <Checkbox
                     checked={verifiedOnly}
-                    onChange={(e) =>
-                      void handleFilterChange(null, e.target.checked, null, null)
+                    onCheckedChange={(checked) =>
+                      void handleFilterChange(null, Boolean(checked), null, null)
                     }
-                    className="h-3 w-3 sm:h-4 sm:w-4"
                   />
                   <span className="text-[11px] sm:text-xs">Verified only</span>
-                </label>
+                </div>
 
-                <label className="flex items-center gap-1">
+                {/* Status */}
+                <div className="flex items-center gap-2">
                   <span className="text-[11px] sm:text-xs">Status</span>
-                  <select
+                  <Select
                     value={statusFilter}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       void handleFilterChange(
                         null,
                         null,
-                        e.target.value as StatusFilter,
+                        value as StatusFilter,
                         null
                       )
                     }
-                    className="rounded border border-border bg-background px-1.5 py-0.5 text-[11px] sm:text-xs"
                   >
-                    <option value="ALL">All</option>
-                    <option value="UNDER_REVIEW">Under Review</option>
-                    <option value="MULTIPLE_REPORTS">Multiple Reports</option>
-                    <option value="PATTERN_MATCH_SCAM">Pattern Match Scam</option>
-                    <option value="SCAM">Confirmed Scam</option>
-                    <option value="NONE">No status</option>
-                  </select>
-                </label>
+                    <SelectTrigger className="h-8 w-[200px] text-[11px] sm:text-xs">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All</SelectItem>
+                      <SelectItem value="UNDER_REVIEW">Under Review</SelectItem>
+                      <SelectItem value="MULTIPLE_REPORTS">Multiple Reports</SelectItem>
+                      <SelectItem value="PATTERN_MATCH_SCAM">
+                        Pattern Match Scam
+                      </SelectItem>
+                      <SelectItem value="SCAM">Confirmed Scam</SelectItem>
+                      <SelectItem value="NONE">No status</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
+              {/* Sort */}
               <div className="flex items-center gap-2">
-                <label className="flex items-center gap-1">
-                  <span className="text-[11px] sm:text-xs">Sort</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) =>
-                      void handleFilterChange(
-                        null,
-                        null,
-                        null,
-                        e.target.value as SortOption
-                      )
-                    }
-                    className="rounded border border-border bg-background px-1.5 py-0.5 text-[11px] sm:text-xs"
-                  >
-                    <option value="NEWEST">Newest</option>
-                    <option value="HIGHEST_RATED">Highest rated</option>
-                    <option value="MOST_REVIEWED">Most reviewed</option>
-                  </select>
-                </label>
+                <span className="text-[11px] sm:text-xs">Sort</span>
+                <Select
+                  value={sortBy}
+                  onValueChange={(value) =>
+                    void handleFilterChange(null, null, null, value as SortOption)
+                  }
+                >
+                  <SelectTrigger className="h-8 w-[180px] text-[11px] sm:text-xs">
+                    <SelectValue placeholder="Newest" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NEWEST">Newest</SelectItem>
+                    <SelectItem value="HIGHEST_RATED">Highest rated</SelectItem>
+                    <SelectItem value="MOST_REVIEWED">Most reviewed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -327,32 +355,11 @@ const BusinessesPage: NextPage = () => {
               {loading && businesses.length === 0 ? (
                 <ListSkeleton count={6} />
               ) : showNoBusinessesYet ? (
-                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
-                  <p>No businesses yet. Add the first business record.</p>
-                  <div className="mt-2">
-                    <Button asChild size="sm">
-                      <Link href="/businesses/add">Add a business</Link>
-                    </Button>
-                  </div>
-                </div>
+                <EmptyState message="No businesses yet. Add the first business record." />
               ) : showNoMatches ? (
-                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
-                  <p>No matches found. Try a different search or add a business.</p>
-                  <div className="mt-2">
-                    <Button asChild size="sm">
-                      <Link href="/businesses/add">Add a business</Link>
-                    </Button>
-                  </div>
-                </div>
+                <EmptyState message="No matches found. Try a different search or add a business." />
               ) : businesses.length === 0 ? (
-                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
-                  <p>No businesses found. Try a different search.</p>
-                  <div className="mt-2">
-                    <Button asChild size="sm">
-                      <Link href="/businesses/add">Add a business</Link>
-                    </Button>
-                  </div>
-                </div>
+                <EmptyState message="No businesses found. Try a different search." />
               ) : (
                 <div className="space-y-2">
                   {businesses.map((biz) => (
@@ -373,37 +380,16 @@ const BusinessesPage: NextPage = () => {
               )}
             </div>
 
-            {/* Desktop list using cards */}
+            {/* Desktop list */}
             <div className="hidden sm:block">
               {loading && businesses.length === 0 ? (
                 <ListSkeleton count={8} />
               ) : showNoBusinessesYet ? (
-                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
-                  <p>No businesses yet. Add the first business record.</p>
-                  <div className="mt-2">
-                    <Button asChild size="sm">
-                      <Link href="/businesses/add">Add a business</Link>
-                    </Button>
-                  </div>
-                </div>
+                <EmptyState message="No businesses yet. Add the first business record." />
               ) : showNoMatches ? (
-                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
-                  <p>No matches found. Try a different search or add a business.</p>
-                  <div className="mt-2">
-                    <Button asChild size="sm">
-                      <Link href="/businesses/add">Add a business</Link>
-                    </Button>
-                  </div>
-                </div>
+                <EmptyState message="No matches found. Try a different search or add a business." />
               ) : businesses.length === 0 ? (
-                <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
-                  <p>No businesses found. Try a different search.</p>
-                  <div className="mt-2">
-                    <Button asChild size="sm">
-                      <Link href="/businesses/add">Add a business</Link>
-                    </Button>
-                  </div>
-                </div>
+                <EmptyState message="No businesses found. Try a different search." />
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
                   {businesses.map((biz) => (
@@ -437,9 +423,7 @@ const BusinessesPage: NextPage = () => {
                   </Button>
                 )}
               </div>
-              <p className="text-muted-foreground">
-                Page {page}
-              </p>
+              <p className="text-muted-foreground">Page {page}</p>
               <div>
                 {hasMore && (
                   <Button
