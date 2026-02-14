@@ -718,8 +718,8 @@ Please keep contributions respectful, factual, and constructive.
                   )}
                 </div>
               </section>
-            </div> :
-          null}
+            </div>
+          ) : null}
         </div>
       </PublicLayout>
     </>);
