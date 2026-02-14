@@ -77,19 +77,19 @@ interface Business {
     platforms: string[] | null;
 }
 
-interface BusinessRow {
-    id: string;
-    name: string;
-    phone: string;
-    location: string | null;
-    category: string | null;
-    branches_count: number | null;
-    status: BusinessStatus | null;
-    verified: boolean;
-    created_by_admin: boolean | null;
-    platforms: string[] | null;
-    created_at: string;
-}
+// interface BusinessRow {
+//     id: string;
+//     name: string;
+//     phone: string;
+//     location: string | null;
+//     category: string | null;
+//     branches_count: number | null;
+//     status: BusinessStatus | null;
+//     verified: boolean;
+//     created_by_admin: boolean | null;
+//     platforms: string[] | null;
+//     created_at: string;
+// }
 
 interface BusinessFormState {
     name: string;
@@ -435,10 +435,10 @@ const AdminBusinessesPage: NextPage = () => {
         setDeleteIdToConfirm(null);
     };
 
-    const handleSignOut = async () => {
-        await authService.signOut();
-        router.replace("/admin/login");
-    };
+    // const handleSignOut = async () => {
+    //     await authService.signOut();
+    //     router.replace("/admin/login");
+    // };
 
     if (checkingAuth) {
         return (
@@ -596,7 +596,7 @@ const AdminBusinessesPage: NextPage = () => {
                                         <Select
                                             value={form.status}
                                             onValueChange={(value: BusinessStatus | "__NONE__") =>
-                                                handleFormChange("status", value)
+                                                handleFormChange("status", value === "__NONE__" ? "" : value)
                                             }
                                         >
                                             <SelectTrigger id="status">

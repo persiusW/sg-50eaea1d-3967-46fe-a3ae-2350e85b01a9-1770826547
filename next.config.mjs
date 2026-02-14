@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 import { createRequire } from "module";
 
-// Check if element-tagger is available
 function isElementTaggerAvailable() {
   try {
     const require = createRequire(import.meta.url);
@@ -12,12 +11,9 @@ function isElementTaggerAvailable() {
   }
 }
 
-// Build turbo rules only if tagger is available
 function getTurboRules() {
   if (!isElementTaggerAvailable()) {
-    console.log(
-      "[Softgen] Element tagger not found, skipping loader configuration"
-    );
+    console.log("[Softgen] Element tagger not found, skipping loader configuration");
     return {};
   }
 
@@ -29,11 +25,12 @@ function getTurboRules() {
 
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    turbo: {
-      rules: getTurboRules(),
-    },
+
+  // ✅ moved from experimental.turbo -> turbopack
+  turbopack: {
+    rules: getTurboRules(),
   },
+
   images: {
     remotePatterns: [
       {
