@@ -69,7 +69,7 @@ const BusinessesPage: NextPage = () => {
 
     const trimmed = search.trim();
     setActiveQuery(trimmed);
-    
+
     if (trimmed.length > 0) {
       baseQuery = baseQuery.or(
         `name.ilike.%${trimmed}%,phone.ilike.%${trimmed}%`
@@ -181,6 +181,7 @@ const BusinessesPage: NextPage = () => {
     !verifiedOnly &&
     statusFilter === "ALL";
 
+
   const showNoMatches =
     !loading &&
     businesses.length === 0 &&
@@ -189,6 +190,21 @@ const BusinessesPage: NextPage = () => {
       selectedCategory !== "ALL" ||
       verifiedOnly ||
       statusFilter !== "ALL");
+
+  const EmptyState = ({
+    message,
+  }: {
+    message: string;
+  }) => (
+    <div className="rounded-md border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+      <p>{message}</p>
+      <div className="mt-2">
+        <Button asChild size="sm">
+          <Link href="/businesses/add">Add a business</Link>
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -312,17 +328,11 @@ const BusinessesPage: NextPage = () => {
               {loading && businesses.length === 0 ? (
                 <ListSkeleton count={6} />
               ) : showNoBusinessesYet ? (
-                <p className="text-xs text-muted-foreground">
-                  No businesses yet. Add the first business record.
-                </p>
+                <EmptyState message="No businesses yet. Add the first business record." />
               ) : showNoMatches ? (
-                <p className="text-xs text-muted-foreground">
-                  No matches found. Try a different search or add a business.
-                </p>
+                <EmptyState message="No matches found. Try a different search or add a business." />
               ) : businesses.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No businesses found. Try a different search.
-                </p>
+                <EmptyState message="No businesses found. Try a different search." />
               ) : (
                 <div className="space-y-2">
                   {businesses.map((biz) => (
@@ -348,17 +358,11 @@ const BusinessesPage: NextPage = () => {
               {loading && businesses.length === 0 ? (
                 <ListSkeleton count={8} />
               ) : showNoBusinessesYet ? (
-                <p className="text-xs text-muted-foreground">
-                  No businesses yet. Add the first business record.
-                </p>
+                <EmptyState message="No businesses yet. Add the first business record." />
               ) : showNoMatches ? (
-                <p className="text-xs text-muted-foreground">
-                  No matches found. Try a different search or add a business.
-                </p>
+                <EmptyState message="No matches found. Try a different search or add a business." />
               ) : businesses.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No businesses found. Try a different search.
-                </p>
+                <EmptyState message="No businesses found. Try a different search." />
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
                   {businesses.map((biz) => (
