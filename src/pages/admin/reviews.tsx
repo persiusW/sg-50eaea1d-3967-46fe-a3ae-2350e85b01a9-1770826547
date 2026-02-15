@@ -1,12 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { NextPage } from "next";
 import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { AdminNav } from "@/components/AdminNav";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AdminAuthSkeleton,
+  AdminTableSkeleton,
+  AdminReviewCardSkeleton,
+} from "@/components/admin/AdminSkeletons";
 
 interface ReviewRow {
   id: string;
@@ -42,20 +47,28 @@ const PAGE_SIZE = 25;
 
 const AdminReviewsPage: NextPage = () => {
   const router = useRouter();
+  const { toast } = useToast();
+
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // delete confirm dialog state
+  const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const [savingId, setSavingId] = useState<string | null>(null);
   const [statusErrors, setStatusErrors] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
+
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+
   const [rowErrors, setRowErrors] = useState<ReviewErrorState>({});
   const [savingIds, setSavingIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
   const [bulkSaving, setBulkSaving] = useState(false);
-  const [deleteIdToConfirm, setDeleteIdToConfirm] = useState<string | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,157 +82,6 @@ const AdminReviewsPage: NextPage = () => {
     };
     void checkAuth();
   }, [router]);
-
-  useEffect(() => {
-    if (checkingAuth) return;
-
-    const fetchReviews = async () => {
-      setLoading(true);
-
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      const { data, error } = await supabase
-        .from("reviews")
-        .select(
-          "id,business_id,reviewer_phone,reviewer_name,rating,body,status,created_at,businesses(name)"
-        )
-        .order("created_at", { ascending: false })
-        .range(from, to);
-
-      if (!error && data) {
-        const mapped: ReviewRow[] = (data as any[]).map((row) => ({
-          id: row.id as string,
-          business_id: row.business_id as string,
-          business_name:
-            (row.businesses && (row.businesses as any).name) || "Unknown",
-          reviewer_phone: row.reviewer_phone as string,
-          reviewer_name: (row.reviewer_name as string | null) ?? null,
-          rating: row.rating as number,
-          body: row.body as string,
-          created_at: row.created_at as string,
-          status: (row.status as string | null) ?? null,
-        }));
-        setReviews(mapped);
-        setHasMore(data.length === PAGE_SIZE);
-      } else {
-        setReviews([]);
-        setHasMore(false);
-      }
-
-      setLoading(false);
-      setSelectedIds([]);
-    };
-
-    void fetchReviews();
-  }, [checkingAuth, page]);
-
-  const handleStatusChange = async (review: ReviewRow, value: string) => {
-    const previous = review.status ?? null;
-    const nextStatus = value === "" ? null : value;
-
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === review.id ? { ...r, status: nextStatus } : r
-      )
-    );
-    setStatusErrors((prev) => {
-      const copy = { ...prev };
-      delete copy[review.id];
-      return copy;
-    });
-
-    setSavingId(review.id);
-    const { error } = await supabase
-      .from("reviews")
-      .update({ status: nextStatus })
-      .eq("id", review.id);
-
-    if (error) {
-      setReviews((prev) =>
-        prev.map((r) =>
-          r.id === review.id ? { ...r, status: previous } : r
-        )
-      );
-      setStatusErrors((prev) => ({
-        ...prev,
-        [review.id]: "Could not update status. Try again.",
-      }));
-    }
-
-    setSavingId(null);
-  };
-
-  const handleStatusQuickChange = async (reviewId: string, nextStatus: string) => {
-    setRowErrors((prev) => ({ ...prev, [reviewId]: null }));
-    setSavingIds((prev) => [...prev, reviewId]);
-
-    setReviews((prev) =>
-      prev.map((review) =>
-        review.id === reviewId ? { ...review, status: nextStatus } : review
-      )
-    );
-
-    const target = reviews.find((r) => r.id === reviewId);
-    const previousStatus = target?.status ?? null;
-
-    const { error } = await supabase
-      .from("reviews")
-      .update({ status: nextStatus })
-      .eq("id", reviewId);
-
-    if (error) {
-      setRowErrors((prev) => ({
-        ...prev,
-        [reviewId]: "Could not update status.",
-      }));
-      setReviews((prev) =>
-        prev.map((review) =>
-          review.id === reviewId ? { ...review, status: previousStatus } : review
-        )
-      );
-    }
-
-    setSavingIds((prev) => prev.filter((id) => id !== reviewId));
-  };
-
-  const handleBulkUpdateReviewStatus = async (nextStatus: ReviewStatus) => {
-    if (selectedIds.length === 0) return;
-
-    setBulkError(null);
-    setBulkSaving(true);
-
-    const prevById = new Map<string, string | null>(
-      reviews.map((r) => [r.id, r.status])
-    );
-
-    const nextValue = nextStatus === "" ? null : nextStatus;
-
-    setReviews((prev) =>
-      prev.map((r) =>
-        selectedIds.includes(r.id) ? { ...r, status: nextValue } : r
-      )
-    );
-
-    const { error } = await supabase
-      .from("reviews")
-      .update({ status: nextValue })
-      .in("id", selectedIds);
-
-    if (error) {
-      setBulkError("Could not update selected reviews. Changes reverted.");
-      setReviews((prev) =>
-        prev.map((r) => ({
-          ...r,
-          status: prevById.get(r.id) ?? r.status,
-        }))
-      );
-    } else {
-      setSelectedIds([]);
-    }
-
-    setBulkSaving(false);
-  };
 
   const refreshPage = async (pageToLoad: number) => {
     const from = (pageToLoad - 1) * PAGE_SIZE;
@@ -239,7 +101,7 @@ const AdminReviewsPage: NextPage = () => {
         business_id: row.business_id as string,
         business_name:
           (row.businesses && (row.businesses as any).name) || "Unknown",
-        reviewer_phone: row.reviewer_phone as string,
+        reviewer_phone: (row.reviewer_phone as string | null) ?? null,
         reviewer_name: (row.reviewer_name as string | null) ?? null,
         rating: row.rating as number,
         body: row.body as string,
@@ -254,43 +116,211 @@ const AdminReviewsPage: NextPage = () => {
     }
   };
 
- const confirmDelete = async (id: string) => {
-  setDeletingId(id);
-  const { error } = await supabase.from("reviews").delete().eq("id", id);
-  if (!error) {
-    await refreshPage(page);
-  }
-  setDeletingId(null);
-};
-const handleDelete = (id: string) => {
-  setDeleteIdToConfirm(id);
-};
+  useEffect(() => {
+    if (checkingAuth) return;
 
-  const handleFilterByBusiness = (name: string) => {
-    setSearch(name);
-  };
+    const fetchReviews = async () => {
+      setLoading(true);
 
-  const handleFilterByPhone = (phone: string) => {
-    setSearch(phone);
-  };
+      await refreshPage(page);
 
-  const filteredReviews = reviews.filter((rev) => {
-    if (!search.trim()) return true;
-    const q = search.trim().toLowerCase();
-    return (
-      (rev.business_name || "").toLowerCase().includes(q) ||
-      (rev.reviewer_name || "").toLowerCase().includes(q) ||
-      (rev.reviewer_phone || "").toLowerCase().includes(q)
+      setLoading(false);
+      setSelectedIds([]);
+    };
+
+    void fetchReviews();
+  }, [checkingAuth, page]);
+
+  const handleStatusChange = async (review: ReviewRow, value: string) => {
+    const previous = review.status ?? null;
+    const nextStatus = value === "" ? null : value;
+
+    // optimistic UI
+    setReviews((prev) =>
+      prev.map((r) => (r.id === review.id ? { ...r, status: nextStatus } : r))
     );
-  });
+    setStatusErrors((prev) => {
+      const copy = { ...prev };
+      delete copy[review.id];
+      return copy;
+    });
+
+    setSavingId(review.id);
+
+    const { error } = await supabase
+      .from("reviews")
+      .update({ status: nextStatus })
+      .eq("id", review.id);
+
+    if (error) {
+      setReviews((prev) =>
+        prev.map((r) => (r.id === review.id ? { ...r, status: previous } : r))
+      );
+      setStatusErrors((prev) => ({
+        ...prev,
+        [review.id]: "Could not update status. Try again.",
+      }));
+      toast({
+        title: "Status update failed",
+        description: "Could not update the review status.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Review updated",
+        description: "Status saved successfully.",
+      });
+    }
+
+    setSavingId(null);
+  };
+
+  const handleStatusQuickChange = async (reviewId: string, nextStatus: string) => {
+    setRowErrors((prev) => ({ ...prev, [reviewId]: null }));
+    setSavingIds((prev) => [...prev, reviewId]);
+
+    // optimistic UI
+    const target = reviews.find((r) => r.id === reviewId);
+    const previousStatus = target?.status ?? null;
+
+    setReviews((prev) =>
+      prev.map((review) =>
+        review.id === reviewId ? { ...review, status: nextStatus } : review
+      )
+    );
+
+    const { error } = await supabase
+      .from("reviews")
+      .update({ status: nextStatus })
+      .eq("id", reviewId);
+
+    if (error) {
+      setRowErrors((prev) => ({
+        ...prev,
+        [reviewId]: "Could not update status.",
+      }));
+      setReviews((prev) =>
+        prev.map((review) =>
+          review.id === reviewId ? { ...review, status: previousStatus } : review
+        )
+      );
+      toast({
+        title: "Status update failed",
+        description: "Could not update the review status.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Review updated",
+        description: "Status saved successfully.",
+      });
+    }
+
+    setSavingIds((prev) => prev.filter((id) => id !== reviewId));
+  };
+
+  const handleBulkUpdateReviewStatus = async (nextStatus: ReviewStatus) => {
+    if (selectedIds.length === 0) return;
+
+    setBulkError(null);
+    setBulkSaving(true);
+
+    const prevById = new Map<string, string | null>(
+      reviews.map((r) => [r.id, r.status])
+    );
+
+    const nextValue = nextStatus === "" ? null : nextStatus;
+
+    // optimistic UI
+    setReviews((prev) =>
+      prev.map((r) =>
+        selectedIds.includes(r.id) ? { ...r, status: nextValue } : r
+      )
+    );
+
+    const { error } = await supabase
+      .from("reviews")
+      .update({ status: nextValue })
+      .in("id", selectedIds);
+
+    if (error) {
+      const message = "Could not update selected reviews. Changes reverted.";
+      setBulkError(message);
+      setReviews((prev) =>
+        prev.map((r) => ({
+          ...r,
+          status: prevById.get(r.id) ?? r.status,
+        }))
+      );
+      toast({
+        title: "Bulk update failed",
+        description: message,
+        variant: "destructive",
+      });
+    } else {
+      const count = selectedIds.length;
+      setSelectedIds([]);
+      toast({
+        title: "Reviews updated",
+        description: `Updated ${count} review${count === 1 ? "" : "s"}.`,
+      });
+    }
+
+    setBulkSaving(false);
+  };
+
+  // open confirm dialog (do not delete here)
+  const handleDelete = (id: string) => {
+    setDeleteIdToConfirm(id);
+  };
+
+  // delete after confirm
+  const confirmDelete = async () => {
+    const id = deleteIdToConfirm;
+    if (!id) return;
+
+    setDeletingId(id);
+
+    const { error } = await supabase.from("reviews").delete().eq("id", id);
+
+    // close dialog promptly
+    setDeletingId(null);
+    setDeleteIdToConfirm(null);
+
+    if (error) {
+      toast({
+        title: "Delete failed",
+        description: error.message || "Could not delete review.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Review deleted",
+      description: "The review was removed successfully.",
+    });
+
+    await refreshPage(page);
+  };
+
+  const filteredReviews = useMemo(() => {
+    return reviews.filter((rev) => {
+      if (!search.trim()) return true;
+      const q = search.trim().toLowerCase();
+      return (
+        (rev.business_name || "").toLowerCase().includes(q) ||
+        (rev.reviewer_name || "").toLowerCase().includes(q) ||
+        (rev.reviewer_phone || "").toLowerCase().includes(q)
+      );
+    });
+  }, [reviews, search]);
 
   const allVisibleIds = filteredReviews.map((r) => r.id);
   const allSelectedOnPage =
-    allVisibleIds.length > 0 &&
-    allVisibleIds.every((id) => selectedIds.includes(id));
+    allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.includes(id));
   const someSelectedOnPage =
-    allVisibleIds.some((id) => selectedIds.includes(id)) &&
-    !allSelectedOnPage;
+    allVisibleIds.some((id) => selectedIds.includes(id)) && !allSelectedOnPage;
 
   if (checkingAuth) {
     return (
@@ -299,11 +329,7 @@ const handleDelete = (id: string) => {
           title="Admin reviews – Transparent Turtle"
           description="Moderate reviews in the Transparent Turtle admin dashboard."
         />
-        <main className="min-h-screen bg-background text-foreground">
-          <div className="container flex min-h-screen items-center justify-center">
-            <p className="text-sm text-muted-foreground">Checking access…</p>
-          </div>
-        </main>
+        <AdminAuthSkeleton />
       </>
     );
   }
@@ -317,11 +343,10 @@ const handleDelete = (id: string) => {
       <main className="min-h-screen bg-background text-foreground">
         <div className="container flex min-h-screen flex-col gap-6 py-8">
           <AdminNav />
+
           <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">
-                Reviews (admin)
-              </h1>
+              <h1 className="text-xl font-semibold tracking-tight">Reviews (admin)</h1>
               <p className="text-sm text-muted-foreground">
                 View and delete public reviews. Deletions are permanent.
               </p>
@@ -329,10 +354,6 @@ const handleDelete = (id: string) => {
           </header>
 
           <section className="space-y-4">
-            <header className="flex items-center justify-between gap-3">
-              <h1 className="text-xl font-semibold tracking-tight">Reviews</h1>
-            </header>
-
             <p className="text-sm text-muted-foreground">
               Moderate public reviews. You can update status or delete any review.
             </p>
@@ -340,32 +361,27 @@ const handleDelete = (id: string) => {
             {selectedIds.length > 0 && (
               <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-[11px]">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">
-                    Selected: {selectedIds.length}
-                  </span>
-                  {bulkError && (
-                    <span className="text-destructive">{bulkError}</span>
-                  )}
+                  <span className="font-medium">Selected: {selectedIds.length}</span>
+                  {bulkError && <span className="text-destructive">{bulkError}</span>}
+
                   <button
                     type="button"
                     disabled={bulkSaving}
-                    onClick={() =>
-                      void handleBulkUpdateReviewStatus("UNDER_REVIEW")
-                    }
+                    onClick={() => void handleBulkUpdateReviewStatus("UNDER_REVIEW")}
                     className="rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800 disabled:opacity-60 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
                   >
                     Set UNDER_REVIEW
                   </button>
+
                   <button
                     type="button"
                     disabled={bulkSaving}
-                    onClick={() =>
-                      void handleBulkUpdateReviewStatus("VERIFIED")
-                    }
+                    onClick={() => void handleBulkUpdateReviewStatus("VERIFIED")}
                     className="rounded-full border border-emerald-500 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800 disabled:opacity-60 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100"
                   >
                     Set VERIFIED
                   </button>
+
                   <button
                     type="button"
                     disabled={bulkSaving}
@@ -374,6 +390,7 @@ const handleDelete = (id: string) => {
                   >
                     Set SPAM
                   </button>
+
                   <button
                     type="button"
                     disabled={bulkSaving}
@@ -397,16 +414,11 @@ const handleDelete = (id: string) => {
                         className="h-3 w-3 accent-emerald-600"
                         checked={allSelectedOnPage}
                         ref={(input) => {
-                          if (input) {
-                            input.indeterminate = someSelectedOnPage;
-                          }
+                          if (input) input.indeterminate = someSelectedOnPage;
                         }}
                         onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedIds(allVisibleIds);
-                          } else {
-                            setSelectedIds([]);
-                          }
+                          if (e.target.checked) setSelectedIds(allVisibleIds);
+                          else setSelectedIds([]);
                         }}
                       />
                     </th>
@@ -418,18 +430,22 @@ const handleDelete = (id: string) => {
                     <th className="px-2 py-2 font-medium">Actions</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {reviews.length === 0 ? (
+                  {loading && reviews.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={7}
-                        className="px-2 py-4 text-center text-xs text-muted-foreground"
-                      >
+                      <td colSpan={7} className="p-0">
+                        <AdminTableSkeleton rows={8} cols={7} />
+                      </td>
+                    </tr>
+                  ) : reviews.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-2 py-4 text-center text-xs text-muted-foreground">
                         No reviews yet.
                       </td>
                     </tr>
                   ) : (
-                    reviews.map((review) => (
+                    filteredReviews.map((review) => (
                       <tr
                         key={review.id}
                         className="border-b border-border/60 align-top text-xs last:border-b-0 hover:bg-muted/40"
@@ -448,28 +464,30 @@ const handleDelete = (id: string) => {
                             }}
                           />
                         </td>
+
                         <td className="px-2 py-2 text-[11px]">
                           {review.business_name || "—"}
                         </td>
+
                         <td className="px-2 py-2 text-[11px] text-muted-foreground">
                           <div>{review.reviewer_phone || "—"}</div>
                           <div className="text-[10px]">
                             {review.reviewer_name || "Anonymous"}
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-[11px]">
-                          {review.rating}
-                        </td>
+
+                        <td className="px-2 py-2 text-[11px]">{review.rating}</td>
+
                         <td className="px-2 py-2 text-[11px] text-muted-foreground">
-                          {review.body}
+                          {truncate(review.body, 220)}
                         </td>
+
                         <td className="px-2 py-2 text-[11px]">
                           <select
                             className="w-full rounded-md border border-border bg-background px-2 py-1 text-[11px]"
                             value={review.status || ""}
-                            onChange={(e) =>
-                              handleStatusChange(review, e.target.value)
-                            }
+                            onChange={(e) => handleStatusChange(review, e.target.value)}
+                            disabled={savingId === review.id}
                           >
                             {REVIEW_STATUS_OPTIONS.map((option) => (
                               <option key={option.value} value={option.value}>
@@ -477,22 +495,21 @@ const handleDelete = (id: string) => {
                               </option>
                             ))}
                           </select>
+
                           {statusErrors[review.id] && (
                             <p className="mt-1 text-[10px] text-destructive">
                               {statusErrors[review.id]}
                             </p>
                           )}
                         </td>
+
                         <td className="px-2 py-2 text-[11px]">
                           <div className="flex flex-wrap items-center gap-1">
                             {review.status !== "UNDER_REVIEW" && (
                               <button
                                 type="button"
                                 onClick={() =>
-                                  void handleStatusQuickChange(
-                                    review.id,
-                                    "UNDER_REVIEW"
-                                  )
+                                  void handleStatusQuickChange(review.id, "UNDER_REVIEW")
                                 }
                                 disabled={savingIds.includes(review.id)}
                                 className="rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800 disabled:opacity-60 dark:border-amber-500 dark:bg-amber-950/40 dark:text-amber-200"
@@ -500,14 +517,12 @@ const handleDelete = (id: string) => {
                                 Under review
                               </button>
                             )}
+
                             {review.status !== "VERIFIED" && (
                               <button
                                 type="button"
                                 onClick={() =>
-                                  void handleStatusQuickChange(
-                                    review.id,
-                                    "VERIFIED"
-                                  )
+                                  void handleStatusQuickChange(review.id, "VERIFIED")
                                 }
                                 disabled={savingIds.includes(review.id)}
                                 className="rounded-full border border-emerald-500 bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-800 disabled:opacity-60 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-100"
@@ -515,29 +530,28 @@ const handleDelete = (id: string) => {
                                 Verified
                               </button>
                             )}
-                            {review.status !== "SCAM_SPAM" && (
+
+                            {review.status !== "SPAM" && (
                               <button
                                 type="button"
-                                onClick={() =>
-                                  void handleStatusQuickChange(
-                                    review.id,
-                                    "SCAM_SPAM"
-                                  )
-                                }
+                                onClick={() => void handleStatusQuickChange(review.id, "SPAM")}
                                 disabled={savingIds.includes(review.id)}
                                 className="rounded-full border border-red-400 bg-red-50 px-2 py-0.5 text-[10px] text-red-700 disabled:opacity-60 dark:border-red-500 dark:bg-red-950/40 dark:text-red-200"
                               >
-                                Scam / spam
+                                Spam
                               </button>
                             )}
+
                             <button
                               type="button"
                               onClick={() => handleDelete(review.id)}
                               className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/15"
+                              disabled={Boolean(deletingId) || deleteIdToConfirm === review.id}
                             >
-                              Delete
+                              {deletingId === review.id ? "Deleting…" : "Delete"}
                             </button>
                           </div>
+
                           {rowErrors[review.id] && (
                             <p className="mt-1 text-[10px] text-destructive-foreground">
                               {rowErrors[review.id]}
@@ -553,12 +567,18 @@ const handleDelete = (id: string) => {
 
             {/* Mobile/card view */}
             <div className="space-y-3 sm:hidden">
-              {reviews.length === 0 ? (
+              {loading && reviews.length === 0 ? (
+                <>
+                  <AdminReviewCardSkeleton />
+                  <AdminReviewCardSkeleton />
+                  <AdminReviewCardSkeleton />
+                </>
+              ) : filteredReviews.length === 0 ? (
                 <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
                   No reviews yet.
                 </div>
               ) : (
-                reviews.map((review) => (
+                filteredReviews.map((review) => (
                   <div
                     key={review.id}
                     className="rounded-md border border-border bg-background p-3 text-xs"
@@ -577,14 +597,14 @@ const handleDelete = (id: string) => {
                           {review.reviewer_name || "Anonymous"}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          <span className="font-medium">Rating:</span>{" "}
-                          {review.rating}
+                          <span className="font-medium">Rating:</span> {review.rating}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
                           <span className="font-medium">Review:</span>{" "}
-                          {review.body}
+                          {truncate(review.body, 240)}
                         </div>
                       </div>
+
                       <div className="pt-1">
                         <input
                           type="checkbox"
@@ -600,13 +620,13 @@ const handleDelete = (id: string) => {
                         />
                       </div>
                     </div>
+
                     <div className="mt-3 flex items-center justify-between gap-2">
                       <select
                         className="w-1/2 rounded-md border border-border bg-background px-2 py-1 text-[11px]"
                         value={review.status || ""}
-                        onChange={(e) =>
-                          handleStatusChange(review, e.target.value)
-                        }
+                        onChange={(e) => handleStatusChange(review, e.target.value)}
+                        disabled={savingId === review.id}
                       >
                         {REVIEW_STATUS_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -614,14 +634,17 @@ const handleDelete = (id: string) => {
                           </option>
                         ))}
                       </select>
+
                       <button
                         type="button"
                         onClick={() => handleDelete(review.id)}
                         className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-[11px] font-medium text-destructive hover:bg-destructive/15"
+                        disabled={Boolean(deletingId) || deleteIdToConfirm === review.id}
                       >
-                        Delete
+                        {deletingId === review.id ? "Deleting…" : "Delete"}
                       </button>
                     </div>
+
                     {statusErrors[review.id] && (
                       <p className="mt-1 text-[10px] text-destructive">
                         {statusErrors[review.id]}
@@ -631,18 +654,42 @@ const handleDelete = (id: string) => {
                 ))
               )}
             </div>
+
+            {/* Pagination */}
+            <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+              <button
+                type="button"
+                onClick={() => setPage((prev) => (prev > 1 && !loading ? prev - 1 : prev))}
+                disabled={page === 1 || loading}
+                className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+              >
+                Previous
+              </button>
+
+              <p className="text-[11px] text-muted-foreground">Page {page}</p>
+
+              <button
+                type="button"
+                onClick={() => setPage((prev) => (hasMore && !loading ? prev + 1 : prev))}
+                disabled={!hasMore || loading}
+                className="rounded-md border border-border bg-background px-3 py-1 text-xs font-medium text-foreground disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
           </section>
         </div>
+
         <ConfirmDialog
           isOpen={deleteIdToConfirm !== null}
-          onOpenChange={(open) => !open && setDeleteIdToConfirm(null)}
-          title="Delete Review"
-          description="Delete this review? This action cannot be undone."
-          onConfirm={() => {
-            const id = deleteIdToConfirm;
-            setDeleteIdToConfirm(null);
-            if (id) confirmDelete(id);
+          onOpenChange={(open) => {
+            if (!open) setDeleteIdToConfirm(null);
           }}
+          title="Delete review"
+          description="Delete this review? This action cannot be undone."
+          confirmText={deletingId ? "Deleting..." : "Delete"}
+          confirmDisabled={Boolean(deletingId)}
+          onConfirm={confirmDelete}
         />
       </main>
     </>

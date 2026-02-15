@@ -5,6 +5,8 @@ import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import { AdminReportRowSkeleton } from "@/components/admin/AdminSkeletons";
 
 interface ScamReportRow {
   id: string;
@@ -70,6 +72,24 @@ const AdminReportsPage: NextPage = () => {
   const [flaggingSuccessId, setFlaggingSuccessId] = useState<string | null>(null);
   const [reusedBusinessIds, setReusedBusinessIds] = useState<Record<string, boolean>>({});
 
+  const notifyConvertError = (message: string) => {
+    setConvertError(message);
+    toast({
+      title: "Conversion failed",
+      description: message,
+      variant: "destructive",
+    });
+  };
+
+  const notifyFlaggingError = (message: string) => {
+    setFlaggingError(message);
+    toast({
+      title: "Flagging failed",
+      description: message,
+      variant: "destructive",
+    });
+  };
+
   const fetchReports = async (pageIndex: number) => {
     setLoading(true);
     setFlaggingError(null);
@@ -131,6 +151,11 @@ const AdminReportsPage: NextPage = () => {
 
     if (error) {
       console.error("Failed to update report status", error);
+      toast({
+        title: "Status update failed",
+        description: "Could not update the report status.",
+        variant: "destructive",
+      });
       setStatusUpdatingId(null);
       return;
     }
@@ -198,7 +223,7 @@ const AdminReportsPage: NextPage = () => {
 
       if (mode === "USE_EXISTING") {
         if (!selectedBusinessId) {
-          setConvertError("Select a business before converting.");
+          notifyConvertError("Select a business before converting.");
           setConvertLoading(false);
           return;
         }
@@ -224,7 +249,7 @@ const AdminReportsPage: NextPage = () => {
               "Error checking existing business by phone during report conversion",
               existingBizError,
             );
-            setConvertError("Failed to check existing business for this phone.");
+            notifyConvertError("Failed to check existing business for this phone.");
             setConvertLoading(false);
             return;
           }
@@ -254,7 +279,7 @@ const AdminReportsPage: NextPage = () => {
 
           if (createBusinessError || !createdBusiness) {
             console.error("Failed to create business during report conversion", createBusinessError);
-            setConvertError("Failed to create business for this report.");
+            notifyConvertError("Failed to create business for this report.");
             setConvertLoading(false);
             return;
           }
@@ -271,7 +296,7 @@ const AdminReportsPage: NextPage = () => {
       }
 
       if (!businessId) {
-        setConvertError("Could not determine business to attach review to.");
+        notifyConvertError("Could not determine business to attach review to.");
         setConvertLoading(false);
         return;
       }
@@ -301,7 +326,7 @@ const AdminReportsPage: NextPage = () => {
 
       if (insertReviewError || !insertedReview) {
         console.error("Failed to create review from report conversion", insertReviewError);
-        setConvertError("Failed to create review from this report.");
+        notifyConvertError("Failed to create review from this report.");
         setConvertLoading(false);
         return;
       }
@@ -315,7 +340,7 @@ const AdminReportsPage: NextPage = () => {
 
       if (linkError) {
         console.error("Failed to link review to scam report", linkError);
-        setConvertError("Review created, but failed to link to report.");
+        notifyConvertError("Review created, but failed to link to report.");
         setConvertLoading(false);
         return;
       }
@@ -332,7 +357,7 @@ const AdminReportsPage: NextPage = () => {
 
       if (updateReportError) {
         console.error("Failed to update scam report after conversion", updateReportError);
-        setConvertError("Review created, but failed to update report status.");
+        notifyConvertError("Review created, but failed to update report status.");
         setConvertLoading(false);
         return;
       }
@@ -352,6 +377,10 @@ const AdminReportsPage: NextPage = () => {
       );
 
       setConvertSuccessId(report.id);
+      toast({
+        title: "Report converted",
+        description: "Review created and report marked as resolved.",
+      });
     } finally {
       setConvertLoading(false);
     }
@@ -376,7 +405,7 @@ const AdminReportsPage: NextPage = () => {
 
     if (existingError) {
       console.error("Error checking existing flagged number", existingError);
-      setFlaggingError("Failed to flag number. Please try again.");
+      notifyFlaggingError("Failed to flag number. Please try again.");
       setFlaggingId(null);
       return;
     }
@@ -401,7 +430,7 @@ const AdminReportsPage: NextPage = () => {
 
       if (updateFlagError) {
         console.error("Error updating existing flagged number", updateFlagError);
-        setFlaggingError("Failed to flag number. Please try again.");
+        notifyFlaggingError("Failed to flag number. Please try again.");
         setFlaggingId(null);
         return;
       }
@@ -416,7 +445,7 @@ const AdminReportsPage: NextPage = () => {
 
       if (insertFlagError) {
         console.error("Error inserting new flagged number", insertFlagError);
-        setFlaggingError("Failed to flag number. Please try again.");
+        notifyFlaggingError("Failed to flag number. Please try again.");
         setFlaggingId(null);
         return;
       }
@@ -429,7 +458,7 @@ const AdminReportsPage: NextPage = () => {
 
     if (reportUpdateError) {
       console.error("Failed to update scam report after flagging number", reportUpdateError);
-      setFlaggingError("Number flagged, but failed to update report status.");
+      notifyFlaggingError("Number flagged, but failed to update report status.");
       setFlaggingId(null);
       return;
     }
@@ -441,6 +470,10 @@ const AdminReportsPage: NextPage = () => {
     );
 
     setFlaggingSuccessId(report.id);
+    toast({
+      title: "Number flagged",
+      description: "The report has been marked as resolved.",
+    });
     setFlaggingId(null);
   };
 
@@ -453,9 +486,13 @@ const AdminReportsPage: NextPage = () => {
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-3 py-4">
         <header className="flex items-center justify-between gap-2">
           <h1 className="text-base font-semibold tracking-tight">Scam reports</h1>
-          <p className="text-xs text-muted-foreground">
-            {loading ? "Loading…" : `${totalCount} reports`}
-          </p>
+          {loading ? (
+            <div className="h-4 w-20 rounded bg-accent animate-pulse" />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {totalCount} reports
+            </p>
+          )}
         </header>
 
         {convertError && (
@@ -479,7 +516,10 @@ const AdminReportsPage: NextPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60 text-xs">
-              {reports.map((report) => {
+              {loading && reports.length === 0 ? (
+                <AdminReportRowSkeleton rows={8} />
+              ) : (
+                reports.map((report) => {
                 const isExpanded = expandedReportId === report.id;
                 const businessName =
                   report.connected_page?.trim() ||
@@ -717,7 +757,7 @@ const AdminReportsPage: NextPage = () => {
                     )}
                   </React.Fragment>
                 );
-              })}
+              }))}
               {!loading && reports.length === 0 && (
                 <tr>
                   <td

@@ -10,6 +10,7 @@ export function AdminNav(): JSX.Element {
   const closeMenu = () => setOpen(false);
 
   const handleSignOut = async () => {
+    closeMenu();
     await supabase.auth.signOut();
     await router.push("/admin/login");
   };
@@ -18,73 +19,104 @@ export function AdminNav(): JSX.Element {
     <header className="border-b bg-background">
       <div className="mx-auto flex w-full max-w-screen-xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <div className="shrink-0 text-sm font-semibold">
-          <Link href="/admin" className="whitespace-nowrap">Transparent Turtle · Admin
-
+          <Link href="/admin" className="whitespace-nowrap">
+            Transparent Turtle · Admin
           </Link>
         </div>
 
+        {/* Desktop nav */}
         <nav className="hidden flex-1 items-center justify-end gap-4 text-sm font-medium text-foreground/90 sm:flex">
           <Link href="/admin" className="whitespace-nowrap hover:text-primary">
             Overview
           </Link>
-          <Link href="/admin/businesses" className="whitespace-nowrap hover:text-primary">
+          <Link
+            href="/admin/businesses"
+            className="whitespace-nowrap hover:text-primary"
+          >
             Businesses
           </Link>
-          <Link href="/admin/reviews" className="whitespace-nowrap hover:text-primary">
+          <Link
+            href="/admin/reviews"
+            className="whitespace-nowrap hover:text-primary"
+          >
             Reviews
           </Link>
-          <Link href="/admin/flagged-numbers" className="whitespace-nowrap hover:text-primary">
+          <Link
+            href="/admin/flagged-numbers"
+            className="whitespace-nowrap hover:text-primary"
+          >
             Flagged numbers
           </Link>
-          <Link href="/admin/reports" className="whitespace-nowrap hover:text-primary">
+          <Link
+            href="/admin/reports"
+            className="whitespace-nowrap hover:text-primary"
+          >
             Reports
           </Link>
           <button
             type="button"
             onClick={handleSignOut}
-            className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-destructive">
-
+            className="whitespace-nowrap text-sm font-medium text-muted-foreground hover:text-destructive"
+          >
             Sign out
           </button>
         </nav>
 
+        {/* Mobile toggle */}
         <button
           type="button"
           className="ml-auto inline-flex items-center rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground sm:hidden"
-          onClick={() => setOpen((prev) => !prev)}>
-
+          onClick={() => setOpen((prev) => !prev)}
+        >
           Menu
         </button>
       </div>
 
-      {open &&
-      <div className="border-t border-border bg-background px-4 pb-3 pt-2 text-sm sm:hidden">
+      {/* Mobile nav */}
+      {open && (
+        <div className="border-t border-border bg-background px-4 pb-3 pt-2 text-sm sm:hidden">
           <nav className="mt-4 flex flex-col gap-2 text-sm font-medium">
-            <Link href="/admin" className="hover:text-primary">
+            <Link href="/admin" onClick={closeMenu} className="hover:text-primary">
               Overview
             </Link>
-            <Link href="/admin/businesses" className="hover:text-primary">
+            <Link
+              href="/admin/businesses"
+              onClick={closeMenu}
+              className="hover:text-primary"
+            >
               Businesses
             </Link>
-            <Link href="/admin/reviews" className="hover:text-primary">
+            <Link
+              href="/admin/reviews"
+              onClick={closeMenu}
+              className="hover:text-primary"
+            >
               Reviews
             </Link>
-            <Link href="/admin/flagged-numbers" className="hover:text-primary">
+            <Link
+              href="/admin/flagged-numbers"
+              onClick={closeMenu}
+              className="hover:text-primary"
+            >
               Flagged numbers
             </Link>
-            <Link href="/admin/reports" className="hover:text-primary">
+            <Link
+              href="/admin/reports"
+              onClick={closeMenu}
+              className="hover:text-primary"
+            >
               Reports
             </Link>
             <button
-            type="button"
-            onClick={handleSignOut}
-            className="mt-2 text-left text-sm font-medium text-muted-foreground hover:text-destructive">
-
+              type="button"
+              onClick={handleSignOut}
+              className="mt-2 text-left text-sm font-medium text-muted-foreground hover:text-destructive"
+            >
               Sign out
             </button>
           </nav>
         </div>
-      }
-    </header>);
-
+      )}
+    </header>
+  );
 }

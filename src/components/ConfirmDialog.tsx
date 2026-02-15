@@ -1,48 +1,79 @@
-import React from "react";
+import * as React from "react";
+import { Button } from "@/components/ui/button";
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-interface ConfirmDialogProps {
-    isOpen: boolean;
-    onOpenChange: (open: boolean) => void;
-    title: string;
-    description: string;
-    onConfirm: () => void;
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+export interface ConfirmDialogProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+
+  confirmText?: string;
+  cancelText?: string;
+
+  confirmDisabled?: boolean;
+  onConfirm: () => void | Promise<void>;
 }
+
 export function ConfirmDialog({
-    isOpen,
-    onOpenChange,
-    title,
-    description,
-    onConfirm,
+  isOpen,
+  onOpenChange,
+  title,
+  description,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  confirmDisabled = false,
+  onConfirm,
 }: ConfirmDialogProps) {
-    return (
-        <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>{title}</AlertDialogTitle>
-                    <AlertDialogDescription>{description}</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                        onClick={(e) => {
-                            e.preventDefault();
-                            onConfirm();
-                        }}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                        Confirm Delete
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const handleConfirm = async () => {
+    try {
+      setSubmitting(true);
+      await onConfirm();
+      onOpenChange(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {description ? (
+            <DialogDescription>{description}</DialogDescription>
+          ) : null}
+        </DialogHeader>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            {cancelText}
+          </Button>
+
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={confirmDisabled || submitting}
+          >
+            {confirmText}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
