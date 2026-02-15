@@ -32,12 +32,7 @@ const nextConfig = {
   },
 
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
-    ],
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
   allowedDevOrigins: ["*.daytona.work", "*.softgen.dev"],
 };
