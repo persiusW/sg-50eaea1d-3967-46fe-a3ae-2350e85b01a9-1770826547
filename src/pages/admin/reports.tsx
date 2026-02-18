@@ -256,7 +256,6 @@ const AdminReportsPage: NextPage = () => {
           }
 
           if (existingBiz) {
-            businessId = existingBiz.id as string;
             reusedExisting = true;
           }
         }
