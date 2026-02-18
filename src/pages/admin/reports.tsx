@@ -255,9 +255,10 @@ const AdminReportsPage: NextPage = () => {
             return;
           }
 
-          if (existingBiz) {
-            reusedExisting = true;
-          }
+            if (existingBiz) {
+                businessId = existingBiz.id;
+                reusedExisting = true;
+            }
         }
 
         if (!businessId) {
