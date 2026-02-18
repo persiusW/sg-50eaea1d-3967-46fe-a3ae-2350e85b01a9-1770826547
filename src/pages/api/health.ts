@@ -68,17 +68,17 @@ export default async function handler(
   } catch (e) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-    
+
     let host = "";
     try {
       host = new URL(supabaseUrl).host;
-    } catch (parseError) {
+    } catch {
       host = "url-parse-error";
     }
-    
+
     const anonKeyPrefix = anonKey.slice(0, 6);
     const message = e instanceof Error ? e.message : "Unknown error in /api/health";
-    
+
     res.status(500).json({
       ok: false,
       error: message,
