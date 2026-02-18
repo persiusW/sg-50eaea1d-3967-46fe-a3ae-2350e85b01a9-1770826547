@@ -4,6 +4,8 @@ import type { Session } from "@supabase/supabase-js";
 export interface AuthUser {
   id: string;
   email: string;
+  user_metadata?: Record<string, any>;
+  created_at?: string;
 }
 
 export interface AuthError {
@@ -73,7 +75,7 @@ export const authService = {
       } : null;
 
       return { user: authUser, error: null };
-    } catch (error) {
+    } catch {
       return { 
         user: null, 
         error: { message: "An unexpected error occurred during sign up" } 
@@ -101,7 +103,7 @@ export const authService = {
       } : null;
 
       return { user: authUser, error: null };
-    } catch (error) {
+    } catch {
       return { 
         user: null, 
         error: { message: "An unexpected error occurred during sign in" } 
@@ -119,7 +121,7 @@ export const authService = {
       }
 
       return { error: null };
-    } catch (error) {
+    } catch {
       return { 
         error: { message: "An unexpected error occurred during sign out" } 
       };
@@ -138,7 +140,7 @@ export const authService = {
       }
 
       return { error: null };
-    } catch (error) {
+    } catch {
       return { 
         error: { message: "An unexpected error occurred during password reset" } 
       };
@@ -165,7 +167,7 @@ export const authService = {
       } : null;
 
       return { user: authUser, error: null };
-    } catch (e) {
+    } catch {
       return { 
         user: null, 
         error: { message: "An unexpected error occurred during email confirmation" } 

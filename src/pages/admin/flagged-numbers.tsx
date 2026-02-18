@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import type { NextPage } from "next";
-import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminNav } from "@/components/AdminNav";
@@ -65,6 +63,7 @@ const STATUS_PREFIX: Partial<Record<FlagStatus, string>> = {
   VERIFIED: "⛔ ",
 };
 
+/*
 interface FlaggedRow {
   id: string;
   phone: string;
@@ -74,6 +73,7 @@ interface FlaggedRow {
   status: string | null;
   created_at: string;
 }
+*/
 
 interface FlaggedErrorState {
   [id: string]: string | null;
@@ -161,6 +161,7 @@ export default function AdminFlaggedNumbersPage() {
     });
   };
 
+  /*
   const handleEdit = (item: FlaggedNumber) => {
     setForm({
       id: item.id,
@@ -200,6 +201,7 @@ export default function AdminFlaggedNumbersPage() {
     }
     setSaving(false);
   };
+  */
 
   const handleFlaggedStatusChange = async (rowId: string, nextStatus: FlagStatus) => {
     setRowErrors((prev) => ({ ...prev, [rowId]: null }));
