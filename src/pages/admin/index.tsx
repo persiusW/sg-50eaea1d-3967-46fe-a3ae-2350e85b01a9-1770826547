@@ -73,196 +73,219 @@ const AdminDashboardPage: NextPage = () => {
     if (checkingAuth) return;
 
     const fetchData = async () => {
-      const totalBusinessesPromise = supabase
-        .from("businesses")
-        .select("id", { count: "exact", head: true });
+      try {
+        const totalBusinessesPromise = supabase
+          .from("businesses")
+          .select("id", { count: "exact", head: true });
 
-      const totalReviewsPromise = supabase
-        .from("reviews")
-        .select("id", { count: "exact", head: true });
+        const totalReviewsPromise = supabase
+          .from("reviews")
+          .select("id", { count: "exact", head: true });
 
-      const totalFlaggedPromise = supabase
-        .from("flagged_numbers")
-        .select("id", { count: "exact", head: true });
+        const totalFlaggedPromise = supabase
+          .from("flagged_numbers")
+          .select("id", { count: "exact", head: true });
 
-      const underReviewBusinessesPromise = supabase
-        .from("businesses")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "UNDER_REVIEW");
+        const underReviewBusinessesPromise = supabase
+          .from("businesses")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "UNDER_REVIEW");
 
-      const underReviewReviewsPromise = supabase
-        .from("reviews")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "UNDER_REVIEW");
+        const underReviewReviewsPromise = supabase
+          .from("reviews")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "UNDER_REVIEW");
 
-      const confirmedScamBusinessesPromise = supabase
-        .from("businesses")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "SCAM");
+        const confirmedScamBusinessesPromise = supabase
+          .from("businesses")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "SCAM");
 
-      const confirmedScamNumbersPromise = supabase
-        .from("flagged_numbers")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "VERIFIED");
+        const confirmedScamNumbersPromise = supabase
+          .from("flagged_numbers")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "VERIFIED");
 
-      const verifiedBusinessesPromise = supabase
-        .from("businesses")
-        .select("id", { count: "exact", head: true })
-        .eq("verified", true);
+        const verifiedBusinessesPromise = supabase
+          .from("businesses")
+          .select("id", { count: "exact", head: true })
+          .eq("verified", true);
 
-      const highRatedBusinessesPromise = supabase
-        .from("businesses_with_ratings")
-        .select("id", { count: "exact", head: true })
-        .gte("avg_rating", 4.0)
-        .gt("reviews_count", 0);
+        const highRatedBusinessesPromise = supabase
+          .from("businesses_with_ratings")
+          .select("id", { count: "exact", head: true })
+          .gte("avg_rating", 4.0)
+          .gt("reviews_count", 0);
 
-      const categoryStatsPromise = supabase
-        .from("businesses")
-        .select("category")
-        .not("category", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(200);
+        const categoryStatsPromise = supabase
+          .from("businesses")
+          .select("category")
+          .not("category", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(200);
 
-      const reviewerStatsPromise = supabase
-        .from("reviews")
-        .select("reviewer_phone, reviewer_name")
-        .order("created_at", { ascending: false })
-        .limit(200);
+        const reviewerStatsPromise = supabase
+          .from("reviews")
+          .select("reviewer_phone, reviewer_name")
+          .order("created_at", { ascending: false })
+          .limit(200);
 
-      const recentReviewsPromise = supabase
-        .from("reviews")
-        .select(
-          "id, created_at, rating, body, reviewer_phone, reviewer_name, businesses(name)"
-        )
-        .order("created_at", { ascending: false })
-        .limit(10);
+        const recentReviewsPromise = supabase
+          .from("reviews")
+          .select(
+            "id, created_at, rating, body, reviewer_phone, reviewer_name, businesses(name)"
+          )
+          .order("created_at", { ascending: false })
+          .limit(10);
 
-      const recentBusinessesPromise = supabase
-        .from("businesses")
-        .select("id, name, phone, category, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
+        const recentBusinessesPromise = supabase
+          .from("businesses")
+          .select("id, name, phone, category, status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(10);
 
-      const [
-        totalBusinessesRes,
-        totalReviewsRes,
-        totalFlaggedRes,
-        underReviewBusinessesRes,
-        underReviewReviewsRes,
-        confirmedScamBusinessesRes,
-        confirmedScamNumbersRes,
-        verifiedBusinessesRes,
-        highRatedBusinessesRes,
-        categoryStatsRes,
-        reviewerStatsRes,
-        recentReviewsRes,
-        recentBusinessesRes,
-      ] = await Promise.all([
-        totalBusinessesPromise,
-        totalReviewsPromise,
-        totalFlaggedPromise,
-        underReviewBusinessesPromise,
-        underReviewReviewsPromise,
-        confirmedScamBusinessesPromise,
-        confirmedScamNumbersPromise,
-        verifiedBusinessesPromise,
-        highRatedBusinessesPromise,
-        categoryStatsPromise,
-        reviewerStatsPromise,
-        recentReviewsPromise,
-        recentBusinessesPromise,
-      ]);
+        const [
+          totalBusinessesRes,
+          totalReviewsRes,
+          totalFlaggedRes,
+          underReviewBusinessesRes,
+          underReviewReviewsRes,
+          confirmedScamBusinessesRes,
+          confirmedScamNumbersRes,
+          verifiedBusinessesRes,
+          highRatedBusinessesRes,
+          categoryStatsRes,
+          reviewerStatsRes,
+          recentReviewsRes,
+          recentBusinessesRes,
+        ] = await Promise.all([
+          totalBusinessesPromise,
+          totalReviewsPromise,
+          totalFlaggedPromise,
+          underReviewBusinessesPromise,
+          underReviewReviewsPromise,
+          confirmedScamBusinessesPromise,
+          confirmedScamNumbersPromise,
+          verifiedBusinessesPromise,
+          highRatedBusinessesPromise,
+          categoryStatsPromise,
+          reviewerStatsPromise,
+          recentReviewsPromise,
+          recentBusinessesPromise,
+        ]);
 
-      setTotalBusinesses(totalBusinessesRes.error ? null : totalBusinessesRes.count ?? null);
-      setTotalReviews(totalReviewsRes.error ? null : totalReviewsRes.count ?? null);
-      setTotalFlagged(totalFlaggedRes.error ? null : totalFlaggedRes.count ?? null);
-      setUnderReviewBusinesses(
-        underReviewBusinessesRes.error ? null : underReviewBusinessesRes.count ?? null
-      );
-      setUnderReviewReviews(
-        underReviewReviewsRes.error ? null : underReviewReviewsRes.count ?? null
-      );
-      setConfirmedScamBusinesses(
-        confirmedScamBusinessesRes.error ? null : confirmedScamBusinessesRes.count ?? null
-      );
-      setConfirmedScamNumbers(
-        confirmedScamNumbersRes.error ? null : confirmedScamNumbersRes.count ?? null
-      );
-      setVerifiedBusinesses(
-        verifiedBusinessesRes.error ? null : verifiedBusinessesRes.count ?? null
-      );
-      setHighRatedBusinesses(
-        highRatedBusinessesRes.error ? null : highRatedBusinessesRes.count ?? null
-      );
+        setTotalBusinesses(totalBusinessesRes.error ? null : totalBusinessesRes.count ?? null);
+        setTotalReviews(totalReviewsRes.error ? null : totalReviewsRes.count ?? null);
+        setTotalFlagged(totalFlaggedRes.error ? null : totalFlaggedRes.count ?? null);
+        setUnderReviewBusinesses(
+          underReviewBusinessesRes.error ? null : underReviewBusinessesRes.count ?? null
+        );
+        setUnderReviewReviews(
+          underReviewReviewsRes.error ? null : underReviewReviewsRes.count ?? null
+        );
+        setConfirmedScamBusinesses(
+          confirmedScamBusinessesRes.error ? null : confirmedScamBusinessesRes.count ?? null
+        );
+        setConfirmedScamNumbers(
+          confirmedScamNumbersRes.error ? null : confirmedScamNumbersRes.count ?? null
+        );
+        setVerifiedBusinesses(
+          verifiedBusinessesRes.error ? null : verifiedBusinessesRes.count ?? null
+        );
+        setHighRatedBusinesses(
+          highRatedBusinessesRes.error ? null : highRatedBusinessesRes.count ?? null
+        );
 
-      setCategoryStats(
-        categoryStatsRes.error || !categoryStatsRes.data
-          ? null
-          : (() => {
-              const counts = new Map<string | null, number>();
-              (categoryStatsRes.data as any[]).forEach((row) => {
-                const key = (row.category as string | null) ?? null;
-                counts.set(key, (counts.get(key) ?? 0) + 1);
-              });
-              const entries: CategoryStat[] = Array.from(counts.entries()).map(
-                ([category, count]) => ({ category, count })
-              );
-              entries.sort((a, b) => b.count - a.count);
-              return entries.slice(0, 10);
-            })()
-      );
+        setCategoryStats(
+          categoryStatsRes.error || !categoryStatsRes.data
+            ? null
+            : (() => {
+                const counts = new Map<string | null, number>();
+                categoryStatsRes.data.forEach((row: { category: string | null }) => {
+                  const key = row.category ?? null;
+                  counts.set(key, (counts.get(key) ?? 0) + 1);
+                });
+                const entries: CategoryStat[] = Array.from(counts.entries()).map(
+                  ([category, count]) => ({ category, count })
+                );
+                entries.sort((a, b) => b.count - a.count);
+                return entries.slice(0, 10);
+              })()
+        );
 
-      setReviewerStats(
-        reviewerStatsRes.error || !reviewerStatsRes.data
-          ? null
-          : (() => {
-              const counts = new Map<
-                string,
-                { reviewer_phone: string; reviewer_name: string | null; count: number }
-              >();
-              (reviewerStatsRes.data as any[]).forEach((row) => {
-                const phone = (row.reviewer_phone as string) || "";
-                const name = (row.reviewer_name as string | null) ?? null;
-                if (!phone) return;
-                const existing = counts.get(phone);
-                if (existing) {
-                  existing.count += 1;
-                } else {
-                  counts.set(phone, { reviewer_phone: phone, reviewer_name: name, count: 1 });
-                }
-              });
-              const values = Array.from(counts.values());
-              values.sort((a, b) => b.count - a.count);
-              return values.slice(0, 10);
-            })()
-      );
+        setReviewerStats(
+          reviewerStatsRes.error || !reviewerStatsRes.data
+            ? null
+            : (() => {
+                const counts = new Map<
+                  string,
+                  { reviewer_phone: string; reviewer_name: string | null; count: number }
+                >();
+                reviewerStatsRes.data.forEach((row: { reviewer_phone: string; reviewer_name: string | null }) => {
+                  const phone = row.reviewer_phone || "";
+                  const name = row.reviewer_name ?? null;
+                  if (!phone) return;
+                  const existing = counts.get(phone);
+                  if (existing) {
+                    existing.count += 1;
+                  } else {
+                    counts.set(phone, { reviewer_phone: phone, reviewer_name: name, count: 1 });
+                  }
+                });
+                const values = Array.from(counts.values());
+                values.sort((a, b) => b.count - a.count);
+                return values.slice(0, 10);
+              })()
+        );
 
-      setRecentReviews(
-        recentReviewsRes.error || !recentReviewsRes.data
-          ? null
-          : (recentReviewsRes.data as any[]).map((rev) => ({
-              id: rev.id as string,
-              created_at: rev.created_at as string,
-              rating: rev.rating as number,
-              body: rev.body as string,
-              reviewer_phone: (rev.reviewer_phone as string | null) ?? null,
-              reviewer_name: (rev.reviewer_name as string | null) ?? null,
-              businesses: (rev.businesses as { name: string | null } | null) ?? null,
-            }))
-      );
+        setRecentReviews(
+          recentReviewsRes.error || !recentReviewsRes.data
+            ? null
+            : recentReviewsRes.data.map((rev: {
+                id: string;
+                created_at: string;
+                rating: number;
+                body: string;
+                reviewer_phone: string | null;
+                reviewer_name: string | null;
+                businesses: { name: string | null } | null;
+              }) => ({
+                id: rev.id,
+                created_at: rev.created_at,
+                rating: rev.rating,
+                body: rev.body,
+                reviewer_phone: rev.reviewer_phone ?? null,
+                reviewer_name: rev.reviewer_name ?? null,
+                businesses: rev.businesses ?? null,
+              }))
+        );
 
-      setRecentBusinesses(
-        recentBusinessesRes.error || !recentBusinessesRes.data
-          ? null
-          : (recentBusinessesRes.data as any[]).map((biz) => ({
-              id: biz.id as string,
-              name: biz.name as string,
-              phone: biz.phone as string,
-              category: (biz.category as string | null) ?? null,
-              status: (biz.status as string | null) ?? null,
-              created_at: biz.created_at as string,
-            }))
-      );
+        setRecentBusinesses(
+          recentBusinessesRes.error || !recentBusinessesRes.data
+            ? null
+            : recentBusinessesRes.data.map((biz: {
+                id: string;
+                name: string;
+                phone: string;
+                category: string | null;
+                status: string | null;
+                created_at: string;
+              }) => ({
+                id: biz.id,
+                name: biz.name,
+                phone: biz.phone,
+                category: biz.category ?? null,
+                status: biz.status ?? null,
+                created_at: biz.created_at,
+              }))
+        );
+      } catch (error) {
+        console.error("Dashboard data fetch error:", error);
+        // Set all to null on catastrophic failure
+        setTotalBusinesses(null);
+        setTotalReviews(null);
+        setTotalFlagged(null);
+      }
     };
 
     void fetchData();

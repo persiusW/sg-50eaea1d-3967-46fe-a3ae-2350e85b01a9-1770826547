@@ -13,24 +13,25 @@ export interface AuthError {
   code?: string;
 }
 
-// Dynamic URL Helper
+// Dynamic URL Helper - Build-safe version
 const getURL = () => {
-  let url = process?.env?.NEXT_PUBLIC_VERCEL_URL ?? 
-           process?.env?.NEXT_PUBLIC_SITE_URL ?? 
-           'http://localhost:3000'
+  // Priority: explicit site URL > Vercel URL > localhost fallback
+  let url = 
+    process.env.NEXT_PUBLIC_SITE_URL || 
+    process.env.NEXT_PUBLIC_VERCEL_URL || 
+    "http://localhost:3000";
   
-  // Handle undefined or null url
-  if (!url) {
-    url = 'http://localhost:3000';
+  // Ensure protocol
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    url = `https://${url}`;
   }
   
-  // Ensure url has protocol
-  url = url.startsWith('http') ? url : `https://${url}`
+  // Ensure trailing slash
+  if (!url.endsWith("/")) {
+    url = `${url}/`;
+  }
   
-  // Ensure url ends with slash
-  url = url.endsWith('/') ? url : `${url}/`
-  
-  return url
+  return url;
 }
 
 export const authService = {

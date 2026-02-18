@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, validateSupabaseConfig } from "@/integrations/supabase/client";
 
 interface HealthOk {
   ok: true;
@@ -22,17 +22,27 @@ export default async function handler(
   res: NextApiResponse<HealthResponse>
 ): Promise<void> {
   try {
+    // Validate configuration first
+    const configCheck = validateSupabaseConfig();
+    if (!configCheck.valid) {
+      res.status(500).json({
+        ok: false,
+        error: configCheck.error || "Invalid Supabase configuration",
+      });
+      return;
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
     let host = "";
     try {
-      host = supabaseUrl ? new URL(supabaseUrl).host : "";
-    } catch {
-      host = "";
+      host = new URL(supabaseUrl).host;
+    } catch (parseError) {
+      host = "invalid-url";
     }
 
-    const anonKeyPrefix = anonKey ? anonKey.slice(0, 6) : "";
+    const anonKeyPrefix = anonKey.slice(0, 6);
 
     const { error } = await supabase
       .from("businesses")
@@ -58,16 +68,17 @@ export default async function handler(
   } catch (e) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    
     let host = "";
     try {
-      host = supabaseUrl ? new URL(supabaseUrl).host : "";
-    } catch {
-      host = "";
+      host = new URL(supabaseUrl).host;
+    } catch (parseError) {
+      host = "url-parse-error";
     }
-    const anonKeyPrefix = anonKey ? anonKey.slice(0, 6) : "";
-
-    const message =
-      e instanceof Error ? e.message : "Unknown error in /api/health";
+    
+    const anonKeyPrefix = anonKey.slice(0, 6);
+    const message = e instanceof Error ? e.message : "Unknown error in /api/health";
+    
     res.status(500).json({
       ok: false,
       error: message,
