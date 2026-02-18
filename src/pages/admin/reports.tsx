@@ -423,10 +423,14 @@ const AdminReportsPage: NextPage = () => {
     }
 
     if (existing) {
-      const updatedPayload: Record<string, unknown> = {
-        status: "UNDER_REVIEW",
-        verified: true,
-      };
+        type FlaggedUpdate = Database["public"]["Tables"]["flagged_numbers"]["Update"];
+
+        const updatedPayload: FlaggedUpdate = {
+            status: "UNDER_REVIEW",
+            verified: true,
+            name_on_number: !existing.name_on_number && nameOnNumber ? nameOnNumber : undefined,
+            connected_page: !existing.connected_page && connectedPage ? connectedPage : undefined,
+        };
 
       if (!existing.name_on_number && nameOnNumber) {
         updatedPayload.name_on_number = nameOnNumber;
