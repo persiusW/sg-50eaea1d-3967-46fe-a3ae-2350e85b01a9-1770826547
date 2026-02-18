@@ -223,14 +223,6 @@ const BusinessDetailPage: NextPage = () => {
         return;
       }
 
-      //   const flaggedSet = new Set<string>();
-      //   (data as any[]).forEach((row) => {
-      //     const p = (row.phone as string | null)?.trim();
-      //     if (p) flaggedSet.add(p);
-      //   });
-      //   setFlaggedPhones(flaggedSet);
-      // };
-
       type FlaggedNumberRow = { phone: string | null };
 
       const flaggedSet = new Set<string>();
@@ -239,9 +231,10 @@ const BusinessDetailPage: NextPage = () => {
         if (p) flaggedSet.add(p);
       });
       setFlaggedPhones(flaggedSet);
+    };
 
-      void checkFlagged();
-    }, [reviews]);
+    void checkFlagged();
+  }, [reviews]);
 
   const handleFormChange = (
     field: keyof ReviewFormState,
