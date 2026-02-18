@@ -3,6 +3,7 @@ import type { NextPage } from "next";
 import { AdminNav } from "@/components/AdminNav";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/database.types";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -254,17 +255,28 @@ const AdminReportsPage: NextPage = () => {
             return;
           }
 
-          if (existingBiz) {
-            businessId = existingBiz.id as string;
-            reusedExisting = true;
-          }
+            if (existingBiz) {
+                businessId = existingBiz.id;
+                reusedExisting = true;
+            }
         }
 
         if (!businessId) {
-          const insertPayload: Record<string, unknown> = {
+          if (!normalized) {
+            notifyConvertError("Cannot create business: Phone number is missing.");
+            setConvertLoading(false);
+            return;
+          }
+
+          // Schema requires a non-null category string.
+          const category = report.business_category?.trim() || "Uncategorized";
+          
+          type BusinessInsert = Database["public"]["Tables"]["businesses"]["Insert"];
+
+          const insertPayload: BusinessInsert = {
             name: nameCandidate,
-            phone: normalized || null,
-            category: report.business_category?.trim() || null,
+            phone: normalized,
+            category: category,
             location: report.business_location?.trim() || null,
             status: "UNDER_REVIEW",
             created_by_admin: true,
@@ -284,7 +296,7 @@ const AdminReportsPage: NextPage = () => {
             return;
           }
 
-          businessId = createdBusiness.id as string;
+          businessId = createdBusiness.id;
         }
 
         if (reusedExisting) {
@@ -411,22 +423,24 @@ const AdminReportsPage: NextPage = () => {
     }
 
     if (existing) {
-      const updatedPayload: Record<string, unknown> = {
-        status: "UNDER_REVIEW",
-        verified: true,
-      };
+        type FlaggedUpdate = Database["public"]["Tables"]["flagged_numbers"]["Update"];
 
-      if (!existing.name_on_number && nameOnNumber) {
-        updatedPayload.name_on_number = nameOnNumber;
-      }
-      if (!existing.connected_page && connectedPage) {
-        updatedPayload.connected_page = connectedPage;
-      }
+        const updatedPayload: FlaggedUpdate = {
+            status: "UNDER_REVIEW",
+            verified: true,
+        };
 
-      const { error: updateFlagError } = await supabase
-        .from("flagged_numbers")
-        .update(updatedPayload)
-        .eq("id", existing.id);
+        if (!existing.name_on_number && nameOnNumber) {
+            updatedPayload.name_on_number = nameOnNumber;
+        }
+        if (!existing.connected_page && connectedPage) {
+            updatedPayload.connected_page = connectedPage;
+        }
+
+        const { error: updateFlagError } = await supabase
+            .from("flagged_numbers")
+            .update(updatedPayload)
+            .eq("id", existing.id);
 
       if (updateFlagError) {
         console.error("Error updating existing flagged number", updateFlagError);

@@ -77,20 +77,6 @@ interface Business {
     platforms: string[] | null;
 }
 
-// interface BusinessRow {
-//     id: string;
-//     name: string;
-//     phone: string;
-//     location: string | null;
-//     category: string | null;
-//     branches_count: number | null;
-//     status: BusinessStatus | null;
-//     verified: boolean;
-//     created_by_admin: boolean | null;
-//     platforms: string[] | null;
-//     created_at: string;
-// }
-
 interface BusinessFormState {
     name: string;
     phone: string;
@@ -206,31 +192,42 @@ const AdminBusinessesPage: NextPage = () => {
 
     useEffect(() => {
         const loadCategories = async () => {
-            const { data, error } = await supabase
-                .from("businesses")
-                .select("category");
+            try {
+                const { data, error } = await supabase
+                    .from("businesses")
+                    .select("category");
 
-            const existing: string[] = !error && data
-                ? Array.from(
-                    new Set(
-                        (data as { category: string | null }[])
-                            .map((row) => row.category?.trim())
-                            .filter((c): c is string => !!c && c.length > 0),
-                    ),
-                )
-                : [];
-
-            const all = [...TOP_CATEGORIES, ...existing];
-
-            const uniqueByLower = new Map<string, string>();
-            for (const cat of all) {
-                const key = cat.toLowerCase();
-                if (!uniqueByLower.has(key)) {
-                    uniqueByLower.set(key, cat);
+                if (error) {
+                    console.error("Failed to load categories:", error);
+                    setCategoryOptions(TOP_CATEGORIES);
+                    return;
                 }
-            }
 
-            setCategoryOptions(Array.from(uniqueByLower.values()));
+                const existing: string[] = data
+                    ? Array.from(
+                        new Set(
+                            data
+                                .map((row: { category: string | null }) => row.category?.trim())
+                                .filter((c): c is string => !!c && c.length > 0),
+                        ),
+                    )
+                    : [];
+
+                const all = [...TOP_CATEGORIES, ...existing];
+
+                const uniqueByLower = new Map<string, string>();
+                for (const cat of all) {
+                    const key = cat.toLowerCase();
+                    if (!uniqueByLower.has(key)) {
+                        uniqueByLower.set(key, cat);
+                    }
+                }
+
+                setCategoryOptions(Array.from(uniqueByLower.values()));
+            } catch (error) {
+                console.error("Category load exception:", error);
+                setCategoryOptions(TOP_CATEGORIES);
+            }
         };
 
         void loadCategories();
@@ -352,7 +349,7 @@ const AdminBusinessesPage: NextPage = () => {
 
         const platformsPayload = buildPlatformsPayload();
 
-        const payload: Record<string, unknown> = {
+        const payload = {
             name,
             phone,
             location: location || null,
