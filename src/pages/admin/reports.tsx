@@ -428,21 +428,19 @@ const AdminReportsPage: NextPage = () => {
         const updatedPayload: FlaggedUpdate = {
             status: "UNDER_REVIEW",
             verified: true,
-            name_on_number: !existing.name_on_number && nameOnNumber ? nameOnNumber : undefined,
-            connected_page: !existing.connected_page && connectedPage ? connectedPage : undefined,
         };
 
-      if (!existing.name_on_number && nameOnNumber) {
-        updatedPayload.name_on_number = nameOnNumber;
-      }
-      if (!existing.connected_page && connectedPage) {
-        updatedPayload.connected_page = connectedPage;
-      }
+        if (!existing.name_on_number && nameOnNumber) {
+            updatedPayload.name_on_number = nameOnNumber;
+        }
+        if (!existing.connected_page && connectedPage) {
+            updatedPayload.connected_page = connectedPage;
+        }
 
-      const { error: updateFlagError } = await supabase
-        .from("flagged_numbers")
-        .update(updatedPayload)
-        .eq("id", existing.id);
+        const { error: updateFlagError } = await supabase
+            .from("flagged_numbers")
+            .update(updatedPayload)
+            .eq("id", existing.id);
 
       if (updateFlagError) {
         console.error("Error updating existing flagged number", updateFlagError);
