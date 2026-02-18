@@ -349,7 +349,7 @@ const AdminBusinessesPage: NextPage = () => {
 
         const platformsPayload = buildPlatformsPayload();
 
-        const payload: Record<string, unknown> = {
+        const payload = {
             name,
             phone,
             location: location || null,

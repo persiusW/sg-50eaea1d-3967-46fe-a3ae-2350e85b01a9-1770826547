@@ -38,7 +38,7 @@ export default async function handler(
     let host = "";
     try {
       host = new URL(supabaseUrl).host;
-    } catch (parseError) {
+    } catch {
       host = "invalid-url";
     }
 

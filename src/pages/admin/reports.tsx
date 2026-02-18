@@ -3,6 +3,7 @@ import type { NextPage } from "next";
 import { AdminNav } from "@/components/AdminNav";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/database.types";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -261,10 +262,21 @@ const AdminReportsPage: NextPage = () => {
         }
 
         if (!businessId) {
-          const insertPayload: Record<string, unknown> = {
+          if (!normalized) {
+            notifyConvertError("Cannot create business: Phone number is missing.");
+            setConvertLoading(false);
+            return;
+          }
+
+          // Schema requires a non-null category string.
+          const category = report.business_category?.trim() || "Uncategorized";
+          
+          type BusinessInsert = Database["public"]["Tables"]["businesses"]["Insert"];
+
+          const insertPayload: BusinessInsert = {
             name: nameCandidate,
-            phone: normalized || null,
-            category: report.business_category?.trim() || null,
+            phone: normalized,
+            category: category,
             location: report.business_location?.trim() || null,
             status: "UNDER_REVIEW",
             created_by_admin: true,
@@ -284,7 +296,7 @@ const AdminReportsPage: NextPage = () => {
             return;
           }
 
-          businessId = createdBusiness.id as string;
+          businessId = createdBusiness.id;
         }
 
         if (reusedExisting) {

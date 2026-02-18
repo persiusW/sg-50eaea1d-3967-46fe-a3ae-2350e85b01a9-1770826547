@@ -1,11 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 
 export interface AuthUser {
   id: string;
   email: string;
-  user_metadata?: any;
-  created_at?: string;
 }
 
 export interface AuthError {
@@ -167,7 +165,7 @@ export const authService = {
       } : null;
 
       return { user: authUser, error: null };
-    } catch (error) {
+    } catch (e) {
       return { 
         user: null, 
         error: { message: "An unexpected error occurred during email confirmation" } 
