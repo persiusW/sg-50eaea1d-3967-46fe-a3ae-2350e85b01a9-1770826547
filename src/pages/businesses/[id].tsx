@@ -5,13 +5,13 @@ import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+//import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PublicLayout } from "@/components/PublicLayout";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusLegend } from "@/components/StatusLegend";
-import { PublicNav } from "@/components/PublicNav";
+//import { PublicNav } from "@/components/PublicNav";
 import { ReviewCardsListSkeleton } from "@/components/skeletons/AppSkeletons";
 
 type BusinessStatus =
@@ -223,9 +223,11 @@ const BusinessDetailPage: NextPage = () => {
         return;
       }
 
+      type FlaggedNumberRow = { phone: string | null };
+
       const flaggedSet = new Set<string>();
-      (data as any[]).forEach((row) => {
-        const p = (row.phone as string | null)?.trim();
+      (data as FlaggedNumberRow[]).forEach((row) => {
+        const p = row.phone?.trim();
         if (p) flaggedSet.add(p);
       });
       setFlaggedPhones(flaggedSet);

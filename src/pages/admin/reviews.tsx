@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import type { NextPage } from "next";
 import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
@@ -12,6 +12,7 @@ import {
   AdminTableSkeleton,
   AdminReviewCardSkeleton,
 } from "@/components/admin/AdminSkeletons";
+import type { Database } from "@/integrations/supabase/database.types";
 
 interface ReviewRow {
   id: string;
@@ -30,6 +31,11 @@ interface ReviewErrorState {
 }
 
 type ReviewStatus = "" | "UNDER_REVIEW" | "VERIFIED" | "SPAM";
+
+type ReviewWithBusiness =
+  Database["public"]["Tables"]["reviews"]["Row"] & {
+    businesses: { name: string | null } | null;
+  };
 
 const truncate = (text: string, max: number): string => {
   if (text.length <= max) return text;
@@ -83,7 +89,7 @@ const AdminReviewsPage: NextPage = () => {
     void checkAuth();
   }, [router]);
 
-  const refreshPage = async (pageToLoad: number) => {
+  const refreshPage = useCallback(async (pageToLoad: number) => {
     const from = (pageToLoad - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -96,40 +102,38 @@ const AdminReviewsPage: NextPage = () => {
       .range(from, to);
 
     if (!error && data) {
-      const mapped: ReviewRow[] = (data as any[]).map((row) => ({
-        id: row.id as string,
-        business_id: row.business_id as string,
-        business_name:
-          (row.businesses && (row.businesses as any).name) || "Unknown",
-        reviewer_phone: (row.reviewer_phone as string | null) ?? null,
-        reviewer_name: (row.reviewer_name as string | null) ?? null,
-        rating: row.rating as number,
-        body: row.body as string,
-        created_at: row.created_at as string,
-        status: (row.status as string | null) ?? null,
+      const mapped: ReviewRow[] = (data as ReviewWithBusiness[]).map((row) => ({
+        id: row.id,
+        business_id: row.business_id,
+        business_name: row.businesses?.name ?? "Unknown",
+        reviewer_phone: row.reviewer_phone ?? null,
+        reviewer_name: row.reviewer_name ?? null,
+        rating: row.rating,
+        body: row.body,
+        created_at: row.created_at,
+        status: row.status ?? null,
       }));
+
       setReviews(mapped);
       setHasMore(data.length === PAGE_SIZE);
     } else {
       setReviews([]);
       setHasMore(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (checkingAuth) return;
 
     const fetchReviews = async () => {
       setLoading(true);
-
       await refreshPage(page);
-
       setLoading(false);
       setSelectedIds([]);
     };
 
     void fetchReviews();
-  }, [checkingAuth, page]);
+  }, [checkingAuth, page, refreshPage]);
 
   const handleStatusChange = async (review: ReviewRow, value: string) => {
     const previous = review.status ?? null;
@@ -357,6 +361,12 @@ const AdminReviewsPage: NextPage = () => {
             <p className="text-sm text-muted-foreground">
               Moderate public reviews. You can update status or delete any review.
             </p>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search business / reviewer / phone…"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm sm:max-w-sm"
+            />
 
             {selectedIds.length > 0 && (
               <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-[11px]">

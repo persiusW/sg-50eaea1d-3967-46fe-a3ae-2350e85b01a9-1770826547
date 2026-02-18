@@ -2,12 +2,12 @@ import React, { useEffect, useState } from "react";
 import type { NextPage } from "next";
 import { SEO } from "@/components/SEO";
 import { PublicLayout } from "@/components/PublicLayout";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+// import { Input } from "@/components/ui/input";
+// import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusLegend } from "@/components/StatusLegend";
-import { ListSkeleton } from "@/components/skeletons/AppSkeletons";
-import Link from "next/link";
+// import { ListSkeleton } from "@/components/skeletons/AppSkeletons";
+// import Link from "next/link";
 
 type FlagStatus =
   | "UNDER_REVIEW"

@@ -4,7 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 export interface AuthUser {
   id: string;
   email: string;
-  user_metadata?: Record<string, any>;
+  user_metadata?: Record<string, unknown>;
   created_at?: string;
 }
 
@@ -16,21 +16,21 @@ export interface AuthError {
 // Dynamic URL Helper - Build-safe version
 const getURL = () => {
   // Priority: explicit site URL > Vercel URL > localhost fallback
-  let url = 
-    process.env.NEXT_PUBLIC_SITE_URL || 
-    process.env.NEXT_PUBLIC_VERCEL_URL || 
+  let url =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_VERCEL_URL ||
     "http://localhost:3000";
-  
+
   // Ensure protocol
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = `https://${url}`;
   }
-  
+
   // Ensure trailing slash
   if (!url.endsWith("/")) {
     url = `${url}/`;
   }
-  
+
   return url;
 }
 
@@ -76,9 +76,9 @@ export const authService = {
 
       return { user: authUser, error: null };
     } catch {
-      return { 
-        user: null, 
-        error: { message: "An unexpected error occurred during sign up" } 
+      return {
+        user: null,
+        error: { message: "An unexpected error occurred during sign up" }
       };
     }
   },
@@ -104,9 +104,9 @@ export const authService = {
 
       return { user: authUser, error: null };
     } catch {
-      return { 
-        user: null, 
-        error: { message: "An unexpected error occurred during sign in" } 
+      return {
+        user: null,
+        error: { message: "An unexpected error occurred during sign in" }
       };
     }
   },
@@ -115,15 +115,15 @@ export const authService = {
   async signOut(): Promise<{ error: AuthError | null }> {
     try {
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) {
         return { error: { message: error.message } };
       }
 
       return { error: null };
     } catch {
-      return { 
-        error: { message: "An unexpected error occurred during sign out" } 
+      return {
+        error: { message: "An unexpected error occurred during sign out" }
       };
     }
   },
@@ -141,8 +141,8 @@ export const authService = {
 
       return { error: null };
     } catch {
-      return { 
-        error: { message: "An unexpected error occurred during password reset" } 
+      return {
+        error: { message: "An unexpected error occurred during password reset" }
       };
     }
   },
@@ -168,9 +168,9 @@ export const authService = {
 
       return { user: authUser, error: null };
     } catch {
-      return { 
-        user: null, 
-        error: { message: "An unexpected error occurred during email confirmation" } 
+      return {
+        user: null,
+        error: { message: "An unexpected error occurred during email confirmation" }
       };
     }
   },
